@@ -5,7 +5,7 @@ import { type ClienteHttp, ErroHttp, limitador } from './http.js';
 import { coletaVazia, juntarColetas } from './juntar.js';
 import { limpar, montarVotos } from './montar.js';
 import { contarPlacar, formatarPlacar, placarDoTexto, placaresIguais } from './placar.js';
-import type { Aviso, Coleta, Proposicao, Resultado, Votacao } from './tipos.js';
+import type { Aviso, Coleta, Placar, Proposicao, Resultado, Votacao } from './tipos.js';
 import { ErroFormato, validar } from './validar.js';
 
 export const CAMARA_API = 'https://dadosabertos.camara.leg.br/api/v2';
@@ -52,7 +52,8 @@ export const RespostaDetalheCamara = z.object({
 export type DetalheCamara = z.infer<typeof RespostaDetalheCamara>['dados'];
 
 const VotoCamara = z.object({
-  tipoVoto: z.string(),
+  /** null em votação secreta: só a participação é pública (ex.: escolha de ministro do TCU). */
+  tipoVoto: z.string().nullable(),
   deputado_: z.object({
     id: z.number(),
     nome: z.string(),
@@ -127,6 +128,10 @@ export function normalizarVotacaoCamara(
 ): Coleta {
   const votacaoId = `camara:${item.id}`;
   const descricao = item.descricao?.trim() ?? '';
+  // A API não marca votação secreta: nela, todos os registros vêm com tipoVoto null e só a
+  // participação é pública (ex.: PDL 995/2026, escolha de ministro do TCU, 02/09/2026 — 466
+  // registros = Sim 404 + Não 61 + Abstenção 1).
+  const secreta = votosFonte.length > 0 && votosFonte.every((v) => v.tipoVoto === null);
   const { votos, parlamentares, avisos } = montarVotos(
     'camara',
     votacaoId,
@@ -138,19 +143,33 @@ export function normalizarVotacaoCamara(
       uf: limpar(v.deputado_.siglaUf),
       valorOriginal: v.tipoVoto,
       motivo: null,
-      classificacao: classificarVotoCamara(v.tipoVoto),
+      classificacao: secreta ? { categoria: 'secreto', conhecido: true } : classificarVotoCamara(v.tipoVoto),
     })),
   );
 
   const nominal = votos.length > 0;
-  const placar = nominal ? contarPlacar(votos) : null;
   const oficial = placarDoTexto(descricao);
-  if (placar && oficial && !placaresIguais(placar, oficial)) {
-    avisos.push({
-      tipo: 'placar_divergente',
-      votacaoId,
-      detalhe: `contado: ${formatarPlacar(placar)} × texto oficial: ${formatarPlacar(oficial)}`,
-    });
+  let placar: Placar | null = null;
+  if (secreta) {
+    // Só os totais oficiais são públicos; confere se batem com o número de participantes.
+    placar = oficial;
+    const soma = oficial ? oficial.sim + oficial.nao + oficial.abstencao : null;
+    if (soma !== null && soma !== votos.length) {
+      avisos.push({
+        tipo: 'placar_divergente',
+        votacaoId,
+        detalhe: `${votos.length} registros de participação × soma do texto oficial ${soma}`,
+      });
+    }
+  } else if (nominal) {
+    placar = contarPlacar(votos);
+    if (oficial && !placaresIguais(placar, oficial)) {
+      avisos.push({
+        tipo: 'placar_divergente',
+        votacaoId,
+        detalhe: `contado: ${formatarPlacar(placar)} × texto oficial: ${formatarPlacar(oficial)}`,
+      });
+    }
   }
 
   const proposicao = escolherProposicaoCamara(item, detalhe);
@@ -167,8 +186,7 @@ export function normalizarVotacaoCamara(
     orgao: item.siglaOrgao,
     descricao,
     resultado: resultadoCamara(item.aprovacao),
-    // A API não marca votação secreta (na Câmara ela é rara, ex.: eleição da Mesa).
-    secreta: false,
+    secreta,
     nominal,
     proposicao,
     placar,
@@ -227,11 +245,12 @@ async function coletarVotacaoCamara(cliente: ClienteHttp, item: VotacaoItemCamar
     coleta.avisos.unshift(...avisos);
     return coleta;
   } catch (erro) {
-    // Formato novo da API para tudo; falha pontual (rede, 5xx persistente) só tira esta votação
-    // da rodada — a coleta seguinte (que olha os últimos 7 dias) tenta de novo.
-    if (erro instanceof ErroFormato) throw erro;
+    // Só esta votação fica de fora; as outras seguem.
+    // - Formato inesperado: precisa ajustar o código (a CLI termina com erro para avisar).
+    // - Falha pontual (rede, 5xx persistente): a coleta seguinte (últimos 7 dias) tenta de novo.
     const motivo = erro instanceof Error ? erro.message : String(erro);
-    return { ...coletaVazia(), avisos: [{ tipo: 'falha_coleta', votacaoId, detalhe: motivo }] };
+    const tipo = erro instanceof ErroFormato ? 'formato_inesperado' : 'falha_coleta';
+    return { ...coletaVazia(), avisos: [{ tipo, votacaoId, detalhe: motivo }] };
   }
 }
 

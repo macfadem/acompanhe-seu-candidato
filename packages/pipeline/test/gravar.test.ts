@@ -1,5 +1,6 @@
 import type { PGlite } from '@electric-sql/pglite';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { normalizarVotacaoCamara } from '../src/camara.js';
 import { gravarColeta } from '../src/gravar.js';
 import { normalizarRespostaSenado, RespostaVotacoesSenado } from '../src/senado.js';
 import type { Coleta } from '../src/tipos.js';
@@ -76,6 +77,29 @@ describe('gravarColeta (Postgres em memória com as migrações)', () => {
     expect(resultado.votacoesMantidas).toBe(1);
     expect(await contar(db, 'voto', `votacao_id = 'senado:7092'`)).toBe(81);
     expect(await contar(db, 'votacao', `id = 'senado:7092' and nominal`)).toBe(1);
+  });
+
+  it('votação secreta da Câmara: participação gravada com valor original vazio (null)', async () => {
+    const coleta = normalizarVotacaoCamara(
+      {
+        id: '9999999-2',
+        data: '2026-09-02',
+        dataHoraRegistro: null,
+        siglaOrgao: 'PLEN',
+        descricao: 'Votação secreta sintética. Sim: 2; Não: 1; Abstenção: 0; Total: 3.',
+        aprovacao: 1,
+        proposicaoObjeto: 'PDL 1/2026',
+        uriProposicaoObjeto: null,
+      },
+      null,
+      [1, 2, 3].map((i) => ({
+        tipoVoto: null,
+        deputado_: { id: 900_000 + i, nome: `Deputado Fictício ${i}`, siglaPartido: 'PARTIDO', siglaUf: 'DF' },
+      })),
+    );
+    await gravarColeta(db, coleta);
+    expect(await contar(db, 'votacao', `secreta and placar_sim = 2 and placar_nao = 1`)).toBe(1);
+    expect(await contar(db, 'voto', `categoria = 'secreto' and valor_original is null`)).toBe(3);
   });
 
   it('partido/UF só mudam com informação mais recente', async () => {

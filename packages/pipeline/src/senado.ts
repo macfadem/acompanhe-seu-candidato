@@ -5,8 +5,8 @@ import type { ClienteHttp } from './http.js';
 import { juntarColetas } from './juntar.js';
 import { limpar, montarVotos } from './montar.js';
 import { contarPlacar, formatarPlacar, placarDoTexto, placaresIguais } from './placar.js';
-import type { Coleta, Placar, Proposicao, Resultado, Votacao } from './tipos.js';
-import { validar } from './validar.js';
+import type { Aviso, Coleta, Placar, Proposicao, Resultado, Votacao } from './tipos.js';
+import { resumirErros, validar } from './validar.js';
 
 export const SENADO_API = 'https://legis.senado.leg.br/dadosabertos';
 
@@ -159,13 +159,47 @@ export function normalizarRespostaSenado(lista: readonly VotacaoSenado[]): Colet
   return juntarColetas(...lista.flatMap((v) => normalizarVotacaoSenado(v) ?? []));
 }
 
+/** Só o necessário para saber de que colegiado é um item, mesmo fora do formato. */
+const ColegiadoSenado = z.object({
+  codigoSessaoVotacao: z.unknown(),
+  informeLegislativo: z.object({ siglaColegiado: z.string().nullish() }).nullish(),
+});
+
+/**
+ * Valida votação por votação. A resposta tem de ser uma lista (senão a coleta para);
+ * uma votação de plenário fora do formato fica de fora com aviso, e as outras seguem.
+ */
+export function lerRespostaSenado(bruto: unknown, contexto: string): { votacoes: VotacaoSenado[]; avisos: Aviso[] } {
+  const lista = validar(z.array(z.unknown()), bruto ?? [], contexto);
+  const votacoes: VotacaoSenado[] = [];
+  const avisos: Aviso[] = [];
+  for (const [i, item] of lista.entries()) {
+    const lida = VotacaoSenado.safeParse(item);
+    if (lida.success) {
+      votacoes.push(lida.data);
+      continue;
+    }
+    const cabecalho = ColegiadoSenado.safeParse(item);
+    const colegiado = cabecalho.success ? limpar(cabecalho.data.informeLegislativo?.siglaColegiado) : null;
+    if (colegiado && colegiado !== 'PLEN') continue; // comissão: fora do MVP de qualquer jeito
+    const codigo = cabecalho.success ? cabecalho.data.codigoSessaoVotacao : undefined;
+    avisos.push({
+      tipo: 'formato_inesperado',
+      votacaoId: typeof codigo === 'number' || typeof codigo === 'string' ? `senado:${codigo}` : `senado:item-${i}`,
+      detalhe: `Formato inesperado em ${contexto}, item ${i}:\n${resumirErros(lida.error)}`,
+    });
+  }
+  return { votacoes, avisos };
+}
+
 export async function coletarSenado(cliente: ClienteHttp, de: string, ate: string): Promise<Coleta> {
   const partes: Coleta[] = [];
   for (const janela of janelasMensais(de, ate)) {
     const url = urlVotacoesSenado(janela.de, janela.ate);
-    const bruto = await cliente.getJson(url);
-    const lista = validar(RespostaVotacoesSenado, bruto ?? [], `votações do Senado (${url})`);
-    partes.push(normalizarRespostaSenado(lista));
+    const { votacoes, avisos } = lerRespostaSenado(await cliente.getJson(url), `votações do Senado (${url})`);
+    const coleta = normalizarRespostaSenado(votacoes);
+    coleta.avisos.push(...avisos);
+    partes.push(coleta);
   }
   return juntarColetas(...partes);
 }

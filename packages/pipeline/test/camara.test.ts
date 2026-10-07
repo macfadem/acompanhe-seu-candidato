@@ -132,6 +132,63 @@ describe('Câmara — votos', () => {
   });
 });
 
+describe('Câmara — votação secreta', () => {
+  // Caso real (coleta de 07/10/2026): votação 2645346-18, PDL 995/2026 (escolha de ministro do
+  // TCU), 02/09/2026. Todos os 466 registros vieram com tipoVoto null. Os números e a forma do
+  // texto são os reais; os deputados abaixo são fictícios (só a participação é pública).
+  const itemSecreta: VotacaoItemCamara = {
+    id: '2645346-18',
+    data: '2026-09-02',
+    dataHoraRegistro: '2026-09-02T13:53:25',
+    siglaOrgao: 'PLEN',
+    descricao: 'Aprovado o Projeto de Decreto Legislativo nº 995, de 2026 (escolha de Ministro do Tribunal de Contas da União). Sim: 404; Não: 61; Abstenção: 1; Total: 466.',
+    aprovacao: 1,
+    proposicaoObjeto: 'PDL 995/2026',
+    uriProposicaoObjeto: null,
+  };
+  const participantes = (n: number): VotoCamara[] =>
+    Array.from({ length: n }, (_, i) => ({
+      tipoVoto: null,
+      deputado_: { id: 900_000 + i, nome: `Deputado Fictício ${i}`, siglaPartido: 'PARTIDO', siglaUf: 'DF' },
+    }));
+
+  it('a API aceita tipoVoto null (antes isso parava a coleta)', () => {
+    expect(() => validar(RespostaVotosCamara, { dados: participantes(3) }, 'votos')).not.toThrow();
+  });
+
+  it('todos os votos null: votação secreta, voto "secreto" e placar do texto oficial', () => {
+    const coleta = normalizarVotacaoCamara(itemSecreta, null, participantes(466));
+    expect(coleta.avisos).toEqual([]);
+    expect(coleta.votacoes[0]).toMatchObject({
+      secreta: true,
+      nominal: true,
+      resultado: 'aprovada',
+      placar: { sim: 404, nao: 61, abstencao: 1 },
+      proposicao: { sigla: 'PDL', numero: '995', ano: 2026 },
+    });
+    expect(coleta.votos).toHaveLength(466);
+    expect(new Set(coleta.votos.map((v) => v.categoria))).toEqual(new Set(['secreto']));
+    expect(coleta.votos.every((v) => v.valorOriginal === null)).toBe(true);
+  });
+
+  it('número de participantes diferente da soma oficial gera aviso', () => {
+    const coleta = normalizarVotacaoCamara(itemSecreta, null, participantes(465));
+    expect(coleta.avisos).toEqual([
+      expect.objectContaining({ tipo: 'placar_divergente', detalhe: expect.stringContaining('465 registros') }),
+    ]);
+  });
+
+  it('voto null só para alguns (votação aberta) vira "outro" e gera aviso', () => {
+    const votos: VotoCamara[] = votosTrecho.map((v, i) => (i === 0 ? { ...v, tipoVoto: null } : v));
+    const coleta = normalizarVotacaoCamara(item('2633410-8'), null, votos);
+    expect(coleta.votacoes[0]?.secreta).toBe(false);
+    expect(coleta.votos[0]).toMatchObject({ categoria: 'outro', valorOriginal: null });
+    expect(coleta.avisos).toContainEqual(
+      expect.objectContaining({ tipo: 'codigo_voto_desconhecido', detalhe: expect.stringContaining('vazio') }),
+    );
+  });
+});
+
 describe('Câmara — coleta completa (cliente falso)', () => {
   it('pagina, trata 404, respeita a concorrência e monta tudo', async () => {
     const plenario = lista.dados.filter((x) => x.siglaOrgao === 'PLEN');
@@ -182,8 +239,21 @@ describe('Câmara — coleta completa (cliente falso)', () => {
     expect(coleta.avisos).toContainEqual(expect.objectContaining({ tipo: 'falha_coleta', votacaoId: 'camara:2633410-8' }));
   });
 
-  it('formato novo da API interrompe a coleta inteira', async () => {
-    const cliente = clienteFalso(rotasDeUmaVotacao('2633410-8', { dados: [{ tipoVoto: 1 }] }));
+  it('formato inesperado numa votação: só ela fica de fora, com o problema resumido', async () => {
+    const quebrados = { dados: Array.from({ length: 50 }, () => ({ tipoVoto: 1 })) };
+    const cliente = clienteFalso(rotasDeUmaVotacao('2633410-8', quebrados));
+    const coleta = await coletarCamara(cliente, '2026-06-17', '2026-06-17');
+    expect(coleta.votacoes.map((v) => v.id)).toEqual(['camara:2382675-97']);
+    const aviso = coleta.avisos.find((a) => a.tipo === 'formato_inesperado');
+    expect(aviso?.votacaoId).toBe('camara:2633410-8');
+    expect(aviso?.detalhe).toMatch(/dados\[\*\]\.tipoVoto: .* — 50 ocorrências/);
+    expect(aviso?.detalhe.split('\n').length).toBeLessThan(6); // 50 problemas iguais = poucas linhas
+  });
+
+  it('formato novo na lista de votações interrompe a coleta inteira', async () => {
+    const cliente = clienteFalso({
+      [urlListaVotacoesCamara('2026-06-17', '2026-06-17')]: { dados: [{ id: 1 }], links: [] },
+    });
     await expect(coletarCamara(cliente, '2026-06-17', '2026-06-17')).rejects.toThrow(/Formato inesperado/);
   });
 });

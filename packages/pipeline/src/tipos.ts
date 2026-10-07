@@ -81,7 +81,8 @@ export interface Voto {
   votacaoId: string;
   parlamentarId: string;
   categoria: CategoriaVoto;
-  valorOriginal: string;
+  /** Exatamente como veio da fonte; null quando ela não informa (votação secreta na Câmara). */
+  valorOriginal: string | null;
   /** Motivo oficial da ausência, quando a fonte informa. */
   motivo: string | null;
   /** Partido e UF na data da votação. */
@@ -96,7 +97,8 @@ export type TipoAviso =
   | 'proposicao_nao_identificada'
   | 'voto_duplicado'
   | 'orgao_nao_informado'
-  | 'falha_coleta'; // a votação ficou de fora desta vez; a próxima coleta tenta de novo
+  | 'falha_coleta' // a votação ficou de fora desta vez; a próxima coleta tenta de novo
+  | 'formato_inesperado'; // a votação ficou de fora até o código ser ajustado (a execução termina com erro)
 
 /** Algo que precisa de revisão humana, sem impedir a coleta. */
 export interface Aviso {

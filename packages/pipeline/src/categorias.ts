@@ -26,8 +26,12 @@ const SENADO = new Map<string, CategoriaVoto>([
   ['p-nrv', 'presente_sem_voto'], // Presente – não registrou voto
 ]);
 
-/** Classifica o `tipoVoto` da API da Câmara. */
-export function classificarVotoCamara(tipoVoto: string): Classificacao {
+/**
+ * Classifica o `tipoVoto` da API da Câmara. Vazio (null) numa votação aberta não tem
+ * sentido conhecido; na votação secreta, quem decide a categoria é `normalizarVotacaoCamara`.
+ */
+export function classificarVotoCamara(tipoVoto: string | null): Classificacao {
+  if (tipoVoto === null) return { categoria: 'outro', conhecido: false };
   const k = chave(tipoVoto);
   const comum = COMUNS.get(k);
   if (comum) return { categoria: comum, conhecido: true };

@@ -49,10 +49,18 @@ function resumo(coleta: Coleta): string {
   linhas.push(`votos: ${coleta.votos.length} · parlamentares: ${coleta.parlamentares.length}`);
   const porTipo = avisosPorTipo(coleta);
   linhas.push(
-    porTipo.size === 0
-      ? 'avisos: nenhum'
-      : `avisos: ${[...porTipo].map(([tipo, n]) => `${tipo}=${n}`).join(', ')} (detalhes no arquivo)`,
+    porTipo.size === 0 ? 'avisos: nenhum' : `avisos: ${[...porTipo].map(([tipo, n]) => `${tipo}=${n}`).join(', ')}`,
   );
+  return linhas.join('\n');
+}
+
+/** Lista curta dos avisos para conferir no terminal (o arquivo tem todos). */
+function detalhesAvisos(coleta: Coleta, maximo = 15): string {
+  const linhas = coleta.avisos.slice(0, maximo).map((a) => {
+    const [primeira, ...resto] = a.detalhe.split('\n');
+    return [`- ${a.tipo} · ${a.votacaoId}: ${primeira}`, ...resto.map((r) => `    ${r}`)].join('\n');
+  });
+  if (coleta.avisos.length > maximo) linhas.push(`- … e mais ${coleta.avisos.length - maximo} no arquivo`);
   return linhas.join('\n');
 }
 
@@ -91,6 +99,17 @@ async function main(): Promise<void> {
   const conteudo = { geradoEm: new Date().toISOString(), intervalo: { de, ate }, casas, fontes: FONTES, ...coleta };
   await writeFile(arquivo, `${JSON.stringify(conteudo, null, 2)}\n`, 'utf8');
   console.log(`${resumo(coleta)}\nGravado em ${arquivo}`);
+  if (coleta.avisos.length > 0) console.log(`\nAvisos para revisar:\n${detalhesAvisos(coleta)}`);
+
+  // Formato desconhecido precisa de ajuste no código: o resto é gravado, mas a execução
+  // termina com erro para que o workflow diário avise por e-mail.
+  const foraDoFormato = coleta.avisos.filter((a) => a.tipo === 'formato_inesperado').length;
+  if (foraDoFormato > 0) {
+    console.error(
+      `\n${foraDoFormato} votação(ões) ficaram de fora: a API respondeu num formato que o código ainda não conhece.`,
+    );
+    process.exitCode = 1;
+  }
 
   // No GitHub Actions, avisos viram anotações visíveis no resumo da execução.
   if (process.env.GITHUB_ACTIONS === 'true') {

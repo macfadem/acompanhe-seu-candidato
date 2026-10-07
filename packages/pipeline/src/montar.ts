@@ -7,7 +7,8 @@ export interface VotoBruto {
   nome: string;
   partido: string | null;
   uf: string | null;
-  valorOriginal: string;
+  /** null quando a fonte não informa o voto. */
+  valorOriginal: string | null;
   motivo: string | null;
   classificacao: Classificacao;
 }
@@ -22,7 +23,7 @@ export function montarVotos(
   const votos = new Map<string, Voto>();
   const parlamentares = new Map<string, Parlamentar>();
   const avisos: Aviso[] = [];
-  const desconhecidos = new Set<string>();
+  const desconhecidos = new Set<string | null>();
 
   for (const b of brutos) {
     const parlamentarId = `${casa}:${b.idCasa}`;
@@ -58,7 +59,10 @@ export function montarVotos(
     avisos.push({
       tipo: 'codigo_voto_desconhecido',
       votacaoId,
-      detalhe: `valor "${codigo}" ainda não mapeado — revisar categorias.ts`,
+      detalhe:
+        codigo === null
+          ? 'voto vazio (null) numa votação que não parece secreta — revisar'
+          : `valor "${codigo}" ainda não mapeado — revisar categorias.ts`,
     });
   }
   return { votos: [...votos.values()], parlamentares: [...parlamentares.values()], avisos };

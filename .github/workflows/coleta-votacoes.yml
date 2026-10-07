@@ -42,7 +42,9 @@ jobs:
           if [ -n "$DE" ]; then args+=(--de "$DE"); fi
           if [ -n "$ATE" ]; then args+=(--ate "$ATE"); fi
           npm run votacoes -- "${args[@]}"
+      # Guarda o JSON mesmo quando a coleta termina com erro (ex.: uma votação em formato desconhecido).
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
           name: votacoes
           path: packages/pipeline/dados/

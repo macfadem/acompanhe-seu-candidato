@@ -2,7 +2,7 @@
 
 Web app público e gratuito: o eleitor monta a colinha das eleições de 2026 e, depois da eleição, acompanha os deputados federais e senadores que escolheu — votações, notícias e um resumo semanal neutro, sempre com link para a fonte oficial.
 
-> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado), esquema do banco, gravação no banco (falta escolher o driver), núcleo da colinha e o script do spike de notícias. Próximo: projeto no Supabase, candidatos do TSE e o app.
+> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco (falta escolher o driver), núcleo da colinha e o script do spike de notícias. Próximo: projeto no Supabase, candidatos do TSE e o app.
 
 ## Princípios
 
@@ -44,6 +44,14 @@ npm run votacoes -- --ajuda
 
 A coleta não precisa de chave: as APIs das duas casas são abertas.
 
+**Windows (PowerShell):** o PowerShell engole o `--` e as opções não chegam ao programa. Rode direto, de dentro de `packages/pipeline`:
+
+```powershell
+cd packages\pipeline
+npx tsx src/cli.ts --de 2026-06-01 --ate 2026-06-30
+npx tsx src/spike-noticias.ts --arquivo dados/votacoes_2026-07-10_2026-10-07.json
+```
+
 ### Spike de notícias (GDELT)
 
 Mede se a GDELT encontra matérias sobre uma amostra sorteada (com semente fixa) de parlamentares e de votações recentes. Leva poucos minutos.
@@ -68,12 +76,18 @@ Gera em `packages/pipeline/dados/spike/` um CSV para revisar à mão (colunas `r
 | `licenca` | LS, LP, LAP |
 | `presente_sem_voto` | P-NRV |
 | `presidente` | Presidente (art. 51 RISF), Art. 17 |
-| `secreto` | "Votou" em votação secreta — a escolha não é pública |
+| `secreto` | votação secreta — a escolha não é pública, só a participação. Senado: "Votou". Câmara: voto vazio (`null`) em todos os registros, ex.: escolha de ministro do TCU |
 | `outro` | código ainda não mapeado (sempre gera aviso) |
 
-4. Confere o placar contado com o texto oficial da votação e registra **avisos** para revisão (código novo, placar divergente, votos indisponíveis, falha pontual de rede).
+4. Confere o placar contado com o texto oficial da votação (na secreta, o número de participantes com a soma oficial) e registra **avisos** para revisão (código novo, placar divergente, votos indisponíveis, falha pontual de rede, formato desconhecido).
 
-Votação sem votos individuais é simbólica — é o caso da maioria — e não é erro. Se a API mudar de formato, a coleta para com erro claro; uma falha pontual numa votação vira aviso e a coleta seguinte tenta de novo.
+Votação sem votos individuais é simbólica — é o caso da maioria — e não é erro.
+
+Quando algo dá errado:
+
+- **Falha pontual** numa votação (rede, erro 5xx que persiste): ela fica de fora com aviso `falha_coleta`, e a coleta seguinte (últimos 7 dias) tenta de novo.
+- **Formato desconhecido** numa votação: ela fica de fora com aviso `formato_inesperado` e o problema resumido; o resto é gravado e a execução termina com erro, para o workflow avisar por e-mail.
+- **A lista de votações mudou de formato:** a coleta para inteira, com erro claro.
 
 ## Banco (Supabase)
 

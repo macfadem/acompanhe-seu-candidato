@@ -38,7 +38,7 @@ export interface LinhasBanco {
     votacao_id: string;
     parlamentar_id: string;
     categoria: string;
-    valor_original: string;
+    valor_original: string | null;
     motivo: string | null;
     partido: string | null;
     uf: string | null;
