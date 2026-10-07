@@ -52,9 +52,6 @@ describe.skipIf(!URL_TESTE)('Postgres de verdade (pg)', () => {
 
   afterAll(async () => {
     await db?.fechar();
-    if (process.env.GITHUB_ACTIONS === 'true') {
-      console.log('::notice title=Integração pg::Testes de integração rodaram num Postgres de verdade (services.postgres).');
-    }
   });
 
   it('aplica as migrações uma vez só', async () => {
