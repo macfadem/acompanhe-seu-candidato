@@ -31,6 +31,7 @@ describe('classificarVotoSenado', () => {
     ['LP', 'Licença Particular', 'licenca'],
     ['LAP', 'Licença paternidade ou ao adotante', 'licenca'],
     ['P-NRV', 'Presente – Não registrou voto', 'presente_sem_voto'],
+    ['NCom', 'Não Compareceu', 'nao_compareceu'],
     ['Presidente (art. 51 RISF)', null, 'presidente'],
   ])('"%s" → %s', (sigla, descricao, categoria) => {
     expect(classificarVotoSenado(sigla, descricao)).toEqual({ categoria, conhecido: true });

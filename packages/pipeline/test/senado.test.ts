@@ -117,8 +117,26 @@ describe('Senado — avisos e casos de borda', () => {
     const coleta = normalizarVotacaoSenado(plp55)!;
     expect(coleta.votos.find((x) => x.valorOriginal === 'XYZ')?.categoria).toBe('outro');
     expect(coleta.avisos).toEqual([
-      expect.objectContaining({ tipo: 'codigo_voto_desconhecido', votacaoId: 'senado:7092' }),
+      expect.objectContaining({
+        tipo: 'codigo_voto_desconhecido',
+        votacaoId: 'senado:7092',
+        detalhe: 'valor "XYZ" (descrição oficial: "Situação nova") em 1 registro(s), classificado como "outro" — revisar categorias.ts',
+      }),
     ]);
+  });
+
+  it('"NCom" (Não Compareceu) tem categoria própria e não gera aviso', () => {
+    // Caso real: votação 7105 (PLP 74/2026, 03/09/2026) tinha 1 registro NCom.
+    const plp55 = lerFixture()[0]!;
+    const registro = plp55.votos!.find((x) => x.siglaVotoParlamentar === 'AP')!;
+    registro.siglaVotoParlamentar = 'NCom';
+    registro.descricaoVotoParlamentar = 'Não Compareceu';
+    const coleta = normalizarVotacaoSenado(plp55)!;
+    expect(coleta.votos.find((x) => x.valorOriginal === 'NCom')).toMatchObject({
+      categoria: 'nao_compareceu',
+      motivo: 'Não Compareceu',
+    });
+    expect(coleta.avisos).toEqual([]);
   });
 
   it('ignora votação de comissão (MVP é só plenário)', () => {

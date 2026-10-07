@@ -84,6 +84,31 @@ describe('Câmara — proposição principal', () => {
   });
 });
 
+describe('Câmara — aviso de proposição não identificada', () => {
+  // Forma real vista na coleta de jul–out/2026: registro de plenário sem votos e sem proposição afetada.
+  const registro: VotacaoItemCamara = {
+    id: '9999999-3',
+    data: '2026-08-12',
+    dataHoraRegistro: null,
+    siglaOrgao: 'PLEN',
+    descricao: 'Alteração do Regime de Tramitação desta proposição em virtude da Aprovação do REQ 3803/2026.',
+    aprovacao: null,
+    proposicaoObjeto: null,
+    uriProposicaoObjeto: null,
+  };
+
+  it('registro sem votos (ex.: alteração de regime de tramitação) não gera aviso', () => {
+    const coleta = normalizarVotacaoCamara(registro, null, []);
+    expect(coleta.votacoes[0]?.proposicao).toBeNull();
+    expect(coleta.avisos).toEqual([]);
+  });
+
+  it('votação com voto individual sem proposição identificável gera aviso', () => {
+    const coleta = normalizarVotacaoCamara(registro, null, votosTrecho);
+    expect(coleta.avisos.map((a) => a.tipo)).toEqual(['proposicao_nao_identificada']);
+  });
+});
+
 describe('Câmara — votos', () => {
   it('converte os votos reais e acusa divergência quando só há um trecho deles', () => {
     const coleta = normalizarVotacaoCamara(item('2633410-8'), null, votosTrecho);

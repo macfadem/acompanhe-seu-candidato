@@ -2,6 +2,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { type LinhasBanco, paraLinhasBanco } from '../src/linhas.js';
 import { normalizarRespostaSenado, RespostaVotacoesSenado } from '../src/senado.js';
+import { CATEGORIAS_VOTO } from '../src/tipos.js';
 import { validar } from '../src/validar.js';
 import { fixture } from './apoio.js';
 import { bancoEmMemoria, contar } from './banco-apoio.js';
@@ -64,6 +65,14 @@ describe('esquema do banco (supabase/migrations)', () => {
       await db.exec('reset role');
     }
     expect(await contar(db, 'voto')).toBe(243);
+  });
+
+  it('o banco aceita exatamente as categorias de voto do código', async () => {
+    const { rows } = await db.query<{ def: string }>(
+      `select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'voto_categoria_check'`,
+    );
+    const noBanco = [...(rows[0]?.def ?? '').matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
+    expect(noBanco).toEqual([...CATEGORIAS_VOTO].sort());
   });
 
   it('recusa dados incoerentes', async () => {

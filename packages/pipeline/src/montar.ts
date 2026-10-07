@@ -23,7 +23,8 @@ export function montarVotos(
   const votos = new Map<string, Voto>();
   const parlamentares = new Map<string, Parlamentar>();
   const avisos: Aviso[] = [];
-  const desconhecidos = new Set<string | null>();
+  /** Código desconhecido → descrição oficial (se houver), categoria usada e quantos registros. */
+  const desconhecidos = new Map<string | null, { descricao: string | null; categoria: string; quantos: number }>();
 
   for (const b of brutos) {
     const parlamentarId = `${casa}:${b.idCasa}`;
@@ -34,7 +35,14 @@ export function montarVotos(
         detalhe: `${parlamentarId} aparece mais de uma vez; ficou o último registro`,
       });
     }
-    if (!b.classificacao.conhecido) desconhecidos.add(b.valorOriginal);
+    if (!b.classificacao.conhecido) {
+      const atual = desconhecidos.get(b.valorOriginal);
+      desconhecidos.set(b.valorOriginal, {
+        descricao: atual?.descricao ?? b.motivo,
+        categoria: b.classificacao.categoria,
+        quantos: (atual?.quantos ?? 0) + 1,
+      });
+    }
     votos.set(parlamentarId, {
       votacaoId,
       parlamentarId,
@@ -55,14 +63,13 @@ export function montarVotos(
     });
   }
 
-  for (const codigo of desconhecidos) {
+  for (const [codigo, { descricao, categoria, quantos }] of desconhecidos) {
+    const valor = codigo === null ? 'voto vazio (null) numa votação que não parece secreta' : `valor "${codigo}"`;
+    const oficial = descricao ? ` (descrição oficial: "${descricao}")` : '';
     avisos.push({
       tipo: 'codigo_voto_desconhecido',
       votacaoId,
-      detalhe:
-        codigo === null
-          ? 'voto vazio (null) numa votação que não parece secreta — revisar'
-          : `valor "${codigo}" ainda não mapeado — revisar categorias.ts`,
+      detalhe: `${valor}${oficial} em ${quantos} registro(s), classificado como "${categoria}" — revisar categorias.ts`,
     });
   }
   return { votos: [...votos.values()], parlamentares: [...parlamentares.values()], avisos };

@@ -130,7 +130,8 @@ export function normalizarVotacaoSenado(v: VotacaoSenado): Coleta | null {
   }
 
   const proposicao = proposicaoSenado(v);
-  if (!proposicao) {
+  // Mesma regra da Câmara: só importa nas votações com voto individual.
+  if (!proposicao && nominal) {
     avisos.push({ tipo: 'proposicao_nao_identificada', votacaoId, detalhe: limpar(v.identificacao) ?? '' });
   }
 

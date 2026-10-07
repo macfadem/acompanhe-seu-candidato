@@ -173,7 +173,9 @@ export function normalizarVotacaoCamara(
   }
 
   const proposicao = escolherProposicaoCamara(item, detalhe);
-  if (!proposicao) {
+  // Só importa nas votações com voto individual (as que aparecem na página de cada deputado).
+  // Registros sem votos, como "Alteração do Regime de Tramitação…", ficam sem proposição e sem aviso.
+  if (!proposicao && nominal) {
     avisos.push({ tipo: 'proposicao_nao_identificada', votacaoId, detalhe: descricao.slice(0, 160) });
   }
 
