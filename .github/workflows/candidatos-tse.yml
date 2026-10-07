@@ -4,10 +4,6 @@ name: Candidatos TSE 2026
 # de candidatos do TSE. Fonte: TSE — Portal de Dados Abertos (CC-BY).
 # Grava no banco só se o secret SUPABASE_DB_URL existir; sempre guarda o JSON como artefato.
 on:
-  # TEMPORÁRIO: só para a primeira execução no branch (um workflow novo só aceita
-  # workflow_dispatch depois de estar na main). Sai antes do merge.
-  push:
-    branches: [candidatos-tse]
   schedule:
     - cron: '41 10 * * *' # 07:41 em Brasília; o TSE atualiza o arquivo 4x por dia
   workflow_dispatch:
