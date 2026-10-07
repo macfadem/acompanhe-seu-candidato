@@ -5,9 +5,6 @@ name: Candidatos TSE 2026
 # Fontes: TSE — Portal de Dados Abertos (CC-BY), Câmara e Senado — Dados Abertos.
 # Grava no banco só se o secret SUPABASE_DB_URL existir; sempre guarda o JSON como artefato.
 on:
-  # TEMPORÁRIO: primeira execução do vínculo no branch. Sai antes do merge.
-  push:
-    branches: [vinculo-tse]
   schedule:
     - cron: '41 10 * * *' # 07:41 em Brasília; o TSE atualiza o arquivo 4x por dia
   workflow_dispatch:
