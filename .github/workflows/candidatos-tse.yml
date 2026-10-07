@@ -1,0 +1,66 @@
+name: Candidatos TSE 2026
+
+on:
+  # TEMPORÁRIO: descoberta do cabeçalho real no branch. Sai antes do merge.
+  push:
+    branches: [candidatos-tse]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspecionar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar e inspecionar consulta_cand_2026.zip
+        run: |
+          set -euo pipefail
+          mkdir -p tse && cd tse
+          curl -fsSL --retry 3 -o cand.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip
+          ls -la cand.zip
+          unzip -o -q cand.zip
+          arquivos=$(ls -1 | grep -v '^cand.zip$' | tr '\n' ' ')
+          echo "::notice title=Arquivos no zip::$(ls -la | awk 'NR>1{print $5" "$9}' | tr '\n' ';')"
+          brasil=$(ls -1 *BRASIL*.csv 2>/dev/null | head -1 || true)
+          [ -z "$brasil" ] && brasil=$(ls -1 *.csv | head -1)
+          echo "arquivo de referência: $brasil"
+          file "$brasil" || true
+          head -c 3 "$brasil" | od -An -tx1
+          cab=$(head -1 "$brasil" | iconv -f latin1 -t utf-8 | tr -d '\r')
+          echo "::notice title=Cabeçalho ($brasil)::$cab"
+          linha=$(sed -n 2p "$brasil" | iconv -f latin1 -t utf-8 | tr -d '\r')
+          echo "::notice title=Linha 2 (amostra)::$linha"
+          total=$(wc -l < "$brasil")
+          # Colunas por nome (campos entre aspas, separados por ;)
+          python3 - "$brasil" <<'PY'
+          import csv, sys, collections
+          f = sys.argv[1]
+          with open(f, encoding='latin-1', newline='') as fh:
+              r = csv.reader(fh, delimiter=';', quotechar='"')
+              cab = next(r)
+              idx = {c: i for i, c in enumerate(cab)}
+              cont = collections.defaultdict(collections.Counter)
+              n = 0
+              alvo = {'DS_CARGO','DS_SIT_TOT_TURNO','DS_SITUACAO_CANDIDATURA','DS_DETALHE_SITUACAO_CAND','CD_SITUACAO_CANDIDATURA','CD_SIT_TOT_TURNO','NR_TURNO','TP_ABRANGENCIA','SG_UE','CD_CARGO','DS_ELEICAO','CD_TIPO_ELEICAO','ST_CANDIDATO_INSERIDO_URNA'}
+              comb = collections.Counter()
+              for linha in r:
+                  n += 1
+                  for c in alvo:
+                      if c in idx and idx[c] < len(linha):
+                          cont[c][linha[idx[c]]] += 1
+                  g = lambda c: linha[idx[c]] if c in idx and idx[c] < len(linha) else '?'
+                  if g('DS_CARGO') in ('DEPUTADO FEDERAL','SENADOR'):
+                      comb[(g('DS_CARGO'), g('DS_SITUACAO_CANDIDATURA'), g('DS_SIT_TOT_TURNO'))] += 1
+          def nota(t, m):
+              m = m.replace('%','%25').replace('\n','%0A')
+              print(f"::notice title={t}::{m}")
+          nota(f'Linhas e colunas', f'{n} linhas, {len(cab)} colunas; ausentes: ' + ','.join(sorted(c for c in alvo if c not in idx)))
+          lin = []
+          for c in sorted(alvo):
+              if c in cont:
+                  lin.append(c + ': ' + ' | '.join(f'{k}={v}' for k, v in cont[c].most_common(25)))
+          nota('Valores por coluna', '\n'.join(lin))
+          nota('Dep. federal e senador: cargo / situação candidatura / situação totalização', '\n'.join(f'{a} / {b} / {c}: {v}' for (a,b,c), v in sorted(comb.items())))
+          PY
