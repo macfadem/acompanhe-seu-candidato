@@ -21,8 +21,8 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/placar.ts            conferência do placar com o texto oficial
   src/gravar.ts            gravação no Postgres: transação, idempotente
   src/spike/               spike de notícias (GDELT)
-  src/github.ts            anotações e resumo da página de execução do GitHub Actions
   src/cli.ts               linha de comando da coleta
+  src/github.ts            anotações e resumo da página de execução do GitHub Actions
 packages/colinha/          núcleo da colinha no navegador (nada vai ao servidor)
 supabase/migrations/       esquema do banco (Postgres/Supabase) com RLS
 .github/workflows/         CI, coleta diária e spike de notícias (manual)
@@ -55,7 +55,15 @@ npx tsx src/spike-noticias.ts --arquivo dados/votacoes_2026-07-10_2026-10-07.jso
 
 ### Spike de notícias (GDELT)
 
-Mede se a GDELT encontra matérias sobre uma amostra sorteada (com semente fixa) de parlamentares e de votações recentes. Leva poucos minutos.
+Mede se a GDELT encontra matérias sobre uma amostra sorteada (com semente fixa) de parlamentares e de votações recentes. A GDELT busca na tradução automática das matérias para o inglês, então os termos de apoio da consulta vão em inglês (`deputy`, `senator`).
+
+**No GitHub Actions** (sem precisar de computador): Actions → *Spike de notícias (GDELT)* → *Run workflow*. Ele coleta as votações dos últimos 85 dias, roda o spike e:
+
+- escreve o resumo e a cobertura de cada alvo na página da execução (anotações e *Summary*);
+- guarda o CSV e o resumo no artefato `spike-noticias` (30 dias). Para baixar: na página da execução, seção **Artifacts**, ou `gh run download <id> -n spike-noticias -R macfadem/acompanhe-seu-candidato`;
+- o CSV usa `;` e vem com BOM: abre direto no Excel em português; no Google Planilhas, importe com separador "ponto e vírgula".
+
+No seu computador:
 
 ```bash
 npm run votacoes -- --de 2026-07-10 --ate 2026-10-07     # últimos 3 meses
@@ -63,12 +71,6 @@ npm run spike:noticias -- --arquivo dados/votacoes_2026-07-10_2026-10-07.json
 ```
 
 Gera em `packages/pipeline/dados/spike/` um CSV para revisar à mão (colunas `relevante` e `homonimo`) e um resumo com o critério de decisão.
-
-**No GitHub Actions** (sem precisar de computador): Actions → *Spike de notícias (GDELT)* → *Run workflow*. Ele coleta as votações dos últimos 85 dias, roda o spike e:
-
-- escreve o resumo e a cobertura de cada alvo na página da execução (anotações e *Summary*);
-- guarda o CSV e o resumo no artefato `spike-noticias` (30 dias). Para baixar: na página da execução, seção **Artifacts**, ou `gh run download <id> -n spike-noticias -R macfadem/acompanhe-seu-candidato`;
-- o CSV usa `;` e vem com BOM: abre direto no Excel em português; no Google Planilhas, importe com separador "ponto e vírgula".
 
 ## O que a coleta faz
 
