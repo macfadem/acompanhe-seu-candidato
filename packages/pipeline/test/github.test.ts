@@ -7,6 +7,7 @@ import {
   type Alvo,
   anotacoesSpike,
   cobertura,
+  executarSpike,
   instrucoesDownload,
   paraResumo,
   type ResultadoAlvo,
@@ -94,5 +95,18 @@ describe('spike no Actions: cobertura e anotações', () => {
     expect(instrucoes).toContain('[página desta execução](https://github.com/o/r/actions/runs/42)');
     expect(instrucoes).toContain('gh run download 42 -n spike-noticias');
     expect(instrucoesDownload(null, 'spike-noticias')).toContain('<id-da-execução>');
+  });
+
+  it('com prazo, para de consultar e registra os alvos que sobraram', async () => {
+    let relogio = 0;
+    const cliente = {
+      async getJson() {
+        relogio += 60_000; // cada consulta "leva" 1 minuto
+        return { articles: [] };
+      },
+    };
+    const alvos = [alvo('parlamentar', 'A'), alvo('parlamentar', 'B'), alvo('votacao', 'C')];
+    const r = await executarSpike(alvos, cliente, { intervaloMs: 0, esperar: async () => {}, prazoMs: 90_000, agora: () => relogio });
+    expect(r.map((x) => x.erro)).toEqual([null, null, 'não consultado: prazo esgotado']);
   });
 });

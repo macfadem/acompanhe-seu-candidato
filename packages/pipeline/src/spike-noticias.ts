@@ -32,6 +32,7 @@ const AJUDA = `Uso: npm run spike:noticias -- --arquivo dados/votacoes_<de>_<ate
   --votacoes N         quantas votações sortear (padrão: 10)
   --intervalo S        segundos entre consultas (padrão: 6)
   --saida PASTA        onde gravar CSV e resumo (padrão: dados/spike)
+  --prazo MIN          para de consultar depois de MIN minutos (padrão: 0 = sem prazo)
   --artefato NOME      nome do artefato no GitHub Actions, citado no resumo (padrão: spike-noticias)`;
 
 function inteiro(valor: string, nome: string, minimo: number): number {
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
       intervalo: { type: 'string', default: '6' },
       saida: { type: 'string', default: path.join('dados', 'spike') },
       artefato: { type: 'string', default: 'spike-noticias' },
+      prazo: { type: 'string', default: '0' },
       ajuda: { type: 'boolean', short: 'h', default: false },
     },
     strict: true,
@@ -79,9 +81,12 @@ async function main(): Promise<void> {
   const minutos = Math.ceil((alvos.length * opcoes.intervaloMs) / 60_000);
   console.log(`Consultando a GDELT para ${alvos.length} alvos (~${minutos} min)…`);
   const actions = noGithubActions();
-  const cliente = criarCliente({ tentativas: 3, esperaBaseMs: 10_000 });
+  // Limites curtos por consulta: uma GDELT lenta não pode consumir o prazo inteiro.
+  const cliente = criarCliente({ tentativas: 3, esperaBaseMs: 10_000, esperaMaxMs: 30_000, timeoutMs: 20_000 });
+  const prazoMs = inteiro(values.prazo, 'prazo', 0) * 60_000;
   const resultados = await executarSpike(alvos, cliente, {
     intervaloMs: opcoes.intervaloMs,
+    prazoMs: prazoMs || undefined,
     // No log do Actions, "\r" não reescreve a linha: imprime de 5 em 5.
     aoProgredir: actions
       ? (i) => (i % 5 === 0 || i === alvos.length - 1) && console.log(`${i + 1}/${alvos.length}`)

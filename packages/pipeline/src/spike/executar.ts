@@ -147,11 +147,23 @@ function descreverErro(erro: unknown): string {
 export async function executarSpike(
   alvos: readonly Alvo[],
   cliente: ClienteHttp,
-  opcoes: Pick<OpcoesSpike, 'intervaloMs'> & { esperar?: (ms: number) => Promise<void>; aoProgredir?: (i: number) => void },
+  opcoes: Pick<OpcoesSpike, 'intervaloMs'> & {
+    esperar?: (ms: number) => Promise<void>;
+    aoProgredir?: (i: number) => void;
+    /** Tempo máximo de consultas; os alvos que sobrarem ficam registrados como não consultados. */
+    prazoMs?: number;
+    agora?: () => number;
+  },
 ): Promise<ResultadoAlvo[]> {
   const esperar = opcoes.esperar ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const agora = opcoes.agora ?? Date.now;
+  const limite = opcoes.prazoMs ? agora() + opcoes.prazoMs : Number.POSITIVE_INFINITY;
   const resultados: ResultadoAlvo[] = [];
   for (const [i, alvo] of alvos.entries()) {
+    if (agora() >= limite) {
+      resultados.push({ alvo, materias: [], erro: 'não consultado: prazo esgotado' });
+      continue;
+    }
     if (i > 0) await esperar(opcoes.intervaloMs);
     opcoes.aoProgredir?.(i);
     try {
