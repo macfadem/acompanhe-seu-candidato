@@ -27,14 +27,15 @@ jobs:
       # Só diz SE o secret existe; o valor fica restrito ao passo que grava.
       BANCO_CONFIGURADO: ${{ secrets.SUPABASE_DB_URL != '' }}
     steps:
-      # Depois da diplomação (até 18/12/2026) os dados não mudam: a execução agendada para.
+      # Até a posse (01/02/2027) e mais duas semanas: os eleitos novatos ganham id na Câmara
+      # e no Senado nessa época, e o vínculo é refeito todo dia. Depois, só manual.
       - name: Conferir a data
         id: data
         env:
           EVENTO: ${{ github.event_name }}
         run: |
-          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2026-12-18" ]; then
-            echo "::notice title=Candidatos TSE::Depois de 18/12/2026 a importação só roda manualmente."
+          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2027-02-15" ]; then
+            echo "::notice title=Candidatos TSE::Depois de 15/02/2027 a importação só roda manualmente."
             echo "seguir=nao" >> "$GITHUB_OUTPUT"
           else
             echo "seguir=sim" >> "$GITHUB_OUTPUT"

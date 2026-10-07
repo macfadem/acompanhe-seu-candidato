@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   const manuais: VinculoManual[] = validar(ArquivoManuais, JSON.parse(await readFile(values.manuais, 'utf8')), values.manuais);
 
   const cliente = criarCliente({ tentativas: 5 });
-  console.log('Baixando as listas da Câmara (legislaturas 55 a 57) e do Senado…');
+  console.log('Baixando as listas da Câmara (legislaturas 55 a 58) e do Senado…');
   const lista = [...(await listaCamara(cliente)), ...(await listaSenado(cliente))];
   const resultado = casar(candidatos, lista, manuais);
   const porCargo = contarPorCargo(candidatos, resultado);

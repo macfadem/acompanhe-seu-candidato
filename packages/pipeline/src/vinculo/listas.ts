@@ -10,7 +10,7 @@
  * apagado por causa de uma resposta incompleta.
  */
 import { z } from 'zod';
-import type { ClienteHttp, ClienteHttpTexto } from '../http.js';
+import { type ClienteHttp, type ClienteHttpTexto, ErroHttp } from '../http.js';
 import { linhasCsv } from '../tse/csv.js';
 import type { Casa } from '../tipos.js';
 import { ErroFormato, validar } from '../validar.js';
@@ -46,22 +46,35 @@ const PaginaDeputados = z.object({
   links: z.array(z.object({ rel: z.string(), href: z.string() })).default([]),
 });
 
-/** Deputados das legislaturas pedidas (da mais recente para a mais antiga), sem repetir id. */
+/**
+ * Deputados das legislaturas pedidas (da mais recente para a mais antiga), sem repetir id.
+ * A 58ª (2027–2031) entra assim que a Câmara cadastrar os eleitos: até lá vem vazia (ou com
+ * erro 4xx, que é ignorado só para legislaturas futuras). A atual tem de vir completa.
+ */
 export async function listaCamara(
   cliente: ClienteHttpTexto,
-  opcoes: { legislaturas?: number[]; minimoNaMaisRecente?: number } = {},
+  opcoes: { legislaturas?: number[]; atual?: number; minimoNaAtual?: number } = {},
 ): Promise<ParlamentarLista[]> {
-  const legislaturas = [...(opcoes.legislaturas ?? [57, 56, 55])].sort((a, b) => b - a);
-  const minimo = opcoes.minimoNaMaisRecente ?? 513;
+  const legislaturas = [...(opcoes.legislaturas ?? [58, 57, 56, 55])].sort((a, b) => b - a);
+  const atual = opcoes.atual ?? 57;
+  const minimo = opcoes.minimoNaAtual ?? 513;
   const porId = new Map<string, ParlamentarLista>();
 
-  for (const [i, legislatura] of legislaturas.entries()) {
+  for (const legislatura of legislaturas) {
     let url: string | undefined =
       `${CAMARA_API}/deputados?idLegislatura=${legislatura}&itens=100&ordem=ASC&ordenarPor=nome`;
     const vistos = new Set<string>();
     for (let paginas = 0; url; paginas++) {
       if (paginas > 50) throw new ErroFormato(`Câmara: paginação sem fim em /deputados?idLegislatura=${legislatura}`);
-      const pagina: z.infer<typeof PaginaDeputados> = validar(PaginaDeputados, await cliente.getJson(url), `Câmara /deputados (legislatura ${legislatura})`);
+      let bruto: unknown;
+      try {
+        bruto = await cliente.getJson(url);
+      } catch (erro) {
+        const futura = legislatura > atual && erro instanceof ErroHttp && erro.status >= 400 && erro.status < 500;
+        if (futura) break; // ainda não existe na API
+        throw erro;
+      }
+      const pagina: z.infer<typeof PaginaDeputados> = validar(PaginaDeputados, bruto, `Câmara /deputados (legislatura ${legislatura})`);
       for (const d of pagina.dados) {
         const idCasa = String(d.id);
         vistos.add(idCasa);
@@ -79,7 +92,7 @@ export async function listaCamara(
       }
       url = pagina.links.find((l) => l.rel === 'next')?.href;
     }
-    if (i === 0 && vistos.size < minimo) {
+    if (legislatura === atual && vistos.size < minimo) {
       throw new ErroFormato(`Câmara: só ${vistos.size} deputados na legislatura ${legislatura} (esperado ≥ ${minimo}) — lista incompleta?`);
     }
   }

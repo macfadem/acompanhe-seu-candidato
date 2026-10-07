@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { ClienteHttpTexto } from '../src/http.js';
+import { type ClienteHttpTexto, ErroHttp } from '../src/http.js';
 import { lerCandidatos } from '../src/tse/candidatos.js';
 import { decodificarLatin1 } from '../src/tse/csv.js';
 import { gravarCandidatos } from '../src/tse/gravar-candidatos.js';
@@ -98,14 +98,14 @@ function clienteListas(): ClienteHttpTexto {
 async function listas(): Promise<ParlamentarLista[]> {
   const cliente = clienteListas();
   return [
-    ...(await listaCamara(cliente, { legislaturas: [56, 57], minimoNaMaisRecente: 4 })),
+    ...(await listaCamara(cliente, { legislaturas: [56, 57], atual: 57, minimoNaAtual: 4 })),
     ...(await listaSenado(cliente, { minimo: 2 })),
   ];
 }
 
 describe('listas oficiais', () => {
   it('Câmara: pagina, fica com a legislatura mais recente e pega só o nome civil do CSV', async () => {
-    const camara = await listaCamara(clienteListas(), { legislaturas: [56, 57], minimoNaMaisRecente: 4 });
+    const camara = await listaCamara(clienteListas(), { legislaturas: [56, 57], atual: 57, minimoNaAtual: 4 });
     expect(camara).toHaveLength(5);
     expect(camara.find((p) => p.id === 'camara:1001')).toEqual({
       id: 'camara:1001',
@@ -122,8 +122,23 @@ describe('listas oficiais', () => {
     for (const pessoal of ['11111111111', '1980-01-01', 'Belo Horizonte']) expect(texto).not.toContain(pessoal); // CPF, nascimento
   });
 
+  it('legislatura futura (58ª): ignora enquanto não existe; quando existir, vale a UF nova', async () => {
+    const base = clienteListas();
+    const semAinda = { ...base, getJson: async (url: string) => (url.includes('idLegislatura=58') ? Promise.reject(new ErroHttp(400, url)) : base.getJson(url)) };
+    expect(await listaCamara(semAinda, { legislaturas: [57, 58], atual: 57, minimoNaAtual: 4 })).toHaveLength(4);
+
+    const novato = deputado(2001, 'Novata', 'BA', 'PXC', 58);
+    const comNovato = { ...base, getJson: async (url: string) => (url.includes('idLegislatura=58') ? { dados: [novato], links: [] } : base.getJson(url)) };
+    const lista = await listaCamara(comNovato, { legislaturas: [57, 58], atual: 57, minimoNaAtual: 4 });
+    expect(lista.find((p) => p.id === 'camara:2001')).toMatchObject({ uf: 'BA', referencia: '58' });
+
+    // Erro na legislatura atual não é ignorado.
+    const quebrada = { ...base, getJson: async (url: string) => Promise.reject(new ErroHttp(400, url)) };
+    await expect(listaCamara(quebrada, { legislaturas: [57], atual: 57 })).rejects.toThrow(/HTTP 400/);
+  });
+
   it('lista menor que o esperado é erro (nunca apaga vínculos por resposta incompleta)', async () => {
-    await expect(listaCamara(clienteListas(), { legislaturas: [57], minimoNaMaisRecente: 513 })).rejects.toThrow(/só 4 deputados/);
+    await expect(listaCamara(clienteListas(), { legislaturas: [57], atual: 57, minimoNaAtual: 513 })).rejects.toThrow(/só 4 deputados/);
     await expect(listaSenado(clienteListas())).rejects.toThrow(/só 2 senadores/);
     expect(() => nomesCivisCamara('uri;nome\nx;y')).toThrow(/nomeCivil/);
   });
