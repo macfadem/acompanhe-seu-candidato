@@ -65,7 +65,7 @@ jobs:
           DE: ${{ steps.periodo.outputs.de }}
           ATE: ${{ steps.periodo.outputs.ate }}
           SEMENTE: ${{ inputs.semente || '20261007' }}
-        run: npm run spike:noticias -- --arquivo "dados/votacoes_${DE}_${ATE}.json" --semente "$SEMENTE" --prazo 35 --artefato spike-noticias
+        run: npm run spike:noticias -- --arquivo "dados/votacoes_${DE}_${ATE}.json" --semente "$SEMENTE" --intervalo 10 --prazo 35 --artefato spike-noticias
       - uses: actions/upload-artifact@v7
         if: always()
         with:

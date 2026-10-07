@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   console.log(`Consultando a GDELT para ${alvos.length} alvos (~${minutos} min)…`);
   const actions = noGithubActions();
   // Limites curtos por consulta: uma GDELT lenta não pode consumir o prazo inteiro.
-  const cliente = criarCliente({ tentativas: 3, esperaBaseMs: 10_000, esperaMaxMs: 30_000, timeoutMs: 20_000 });
+  const cliente = criarCliente({ tentativas: 4, esperaBaseMs: 10_000, esperaMaxMs: 30_000, timeoutMs: 20_000 });
   const prazoMs = inteiro(values.prazo, 'prazo', 0) * 60_000;
   const resultados = await executarSpike(alvos, cliente, {
     intervaloMs: opcoes.intervaloMs,

@@ -51,18 +51,19 @@ describe('consultas à GDELT', () => {
     expect(variantesNumero({ sigla: 'PL', numero: '4133', ano: 2023 })).toEqual([
       'PL 4133/2023',
       'PL 4.133/2023',
-      'projeto de lei 4133',
-      'projeto de lei 4.133',
+      '4133/2023',
+      '4.133/2023',
+      '4,133/2023',
     ]);
     expect(variantesNumero({ sigla: 'MPV', numero: '1343', ano: 2026 })).toContain('MP 1.343/2026');
   });
 
   it('monta consultas e URL no formato da API', () => {
     expect(consultaParlamentar({ nome: 'Dra. Eudócia', casa: 'senado' })).toBe(
-      '"Dra. Eudócia" (senador OR senadora) sourcecountry:brazil',
+      '"Dra. Eudócia" senator sourcecountry:brazil', // a GDELT busca na tradução para o inglês
     );
     expect(consultaProposicao({ sigla: 'PLP', numero: '55', ano: 2026 })).toBe(
-      '("PLP 55/2026" OR "projeto de lei complementar 55") sourcecountry:brazil',
+      '("PLP 55/2026" OR "55/2026") sourcecountry:brazil',
     );
     const url = new URL(
       urlConsultaGdelt('"x"', { inicio: new Date('2026-09-01T00:00:00Z'), fim: new Date('2026-09-04T00:00:00Z') }),
