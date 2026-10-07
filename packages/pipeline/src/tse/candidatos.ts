@@ -4,8 +4,9 @@
  * cabeçalho — a ordem das colunas pode mudar; uma coluna obrigatória ausente é erro.
  *
  * Privacidade: o arquivo traz CPF, título de eleitor, e-mail, data de nascimento, gênero,
- * cor/raça, estado civil e grau de instrução. Só as colunas de COLUNAS_OBRIGATORIAS são
- * lidas; as outras nunca saem da linha bruta (que é descartada em seguida).
+ * cor/raça, estado civil e grau de instrução. Só as colunas de COLUNAS_OBRIGATORIAS (e o
+ * nome social, quando houver) são lidas; as outras nunca saem da linha bruta. Quem tem nome
+ * social é identificado por ele: o nome de registro dessa pessoa não é guardado.
  *
  * Fonte: TSE — Portal de Dados Abertos (CC-BY).
  */
@@ -59,6 +60,7 @@ export interface CandidatoTse {
   uf: string;
   numero: number;
   nomeUrna: string;
+  /** Nome social, quando informado ao TSE; senão o nome civil. Usado no vínculo com Câmara/Senado. */
   nomeCivil: string;
   partido: string;
   federacao: string | null;
@@ -111,6 +113,8 @@ export function lerCandidatos(texto: string, ano = 2026): LeituraCandidatos {
     );
   }
   const indice = Object.fromEntries(COLUNAS_OBRIGATORIAS.map((c) => [c, cabecalho.indexOf(c)])) as Record<Coluna, number>;
+  // Opcional: quem informou nome social ao TSE é identificado por ele (nunca pelo nome de registro).
+  const iNomeSocial = cabecalho.indexOf('NM_SOCIAL_CANDIDATO');
 
   const avisos: AvisoTse[] = [];
   const porSq = new Map<string, CandidatoTse>();
@@ -146,7 +150,7 @@ export function lerCandidatos(texto: string, ano = 2026): LeituraCandidatos {
     const uf = v('SG_UF');
     const geradoEmTse = dataHoraGeracao(v('DT_GERACAO'), v('HH_GERACAO'));
     const nomeUrna = v('NM_URNA_CANDIDATO');
-    const nomeCivil = v('NM_CANDIDATO');
+    const nomeCivil = (iNomeSocial >= 0 ? nulo(campos[iNomeSocial] ?? '') : null) ?? v('NM_CANDIDATO');
     const partido = v('SG_PARTIDO');
     const problemas = [
       !/^\d+$/.test(sq) && 'SQ_CANDIDATO',

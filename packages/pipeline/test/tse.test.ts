@@ -72,6 +72,16 @@ describe('candidatos do TSE (guiado pelo cabeçalho)', () => {
     }
   });
 
+  it('nome social, quando informado, substitui o nome de registro (que não é guardado)', () => {
+    const linhas = [...linhasCsv(texto)];
+    const cab = linhas[0]!;
+    const comSocial = [...linhas[1]!];
+    comSocial[cab.indexOf('NM_SOCIAL_CANDIDATO')] = 'ANA SOCIAL DE SOUZA';
+    const leitura = lerCandidatos(serializar([cab, comSocial, linhas[2]!]));
+    expect(leitura.candidatos.map((c) => c.nomeCivil)).toEqual(['ANA SOCIAL DE SOUZA', 'BRUNO EXEMPLO; JÚNIOR']);
+    expect(JSON.stringify(leitura)).not.toContain('ANA FICTÍCIA DE SOUZA');
+  });
+
   it('a ordem das colunas não importa; coluna obrigatória ausente é erro', () => {
     const linhas = [...linhasCsv(texto)];
     const ordem = linhas[0]!.map((_, i) => i).reverse();

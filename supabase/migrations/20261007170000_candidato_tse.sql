@@ -12,7 +12,7 @@ create table public.candidato_tse (
   uf                       text not null check (uf ~ '^[A-Z]{2}$'),
   numero                   integer not null check (numero > 0),                 -- número na urna
   nome_urna                text not null,
-  nome_civil               text not null,                                       -- para o vínculo com Câmara/Senado
+  nome_civil               text not null,                                       -- nome social se informado ao TSE; senão o civil (vínculo com Câmara/Senado)
   partido                  text not null,                                       -- sigla
   federacao                text,                                                -- sigla da federação, se houver
   cd_situacao_totalizacao  smallint,                                            -- código do TSE; null = sem totalização (#NULO)

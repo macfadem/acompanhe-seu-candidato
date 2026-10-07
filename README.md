@@ -76,7 +76,7 @@ Importa deputados federais e senadores do arquivo de candidatos do TSE, com a **
 
 - Arquivo: `consulta_cand_2026_BRASIL.csv`, dentro de [`consulta_cand_2026.zip`](https://dadosabertos.tse.jus.br/dataset/candidatos-2026) — Latin-1, separado por `;`.
 - O leitor é guiado pelo **cabeçalho** (conferido no arquivo real de 07/10/2026, 50 colunas): a ordem pode mudar; coluna obrigatória ausente é erro.
-- **Privacidade:** o arquivo traz CPF, título de eleitor, e-mail, data de nascimento, gênero, cor/raça e outros dados pessoais. Só as colunas necessárias são lidas; nada disso vai para o banco, para o JSON ou para o resumo.
+- **Privacidade:** o arquivo traz CPF, título de eleitor, e-mail, data de nascimento, gênero, cor/raça e outros dados pessoais. Só as colunas necessárias são lidas; nada disso vai para o banco, para o JSON ou para o resumo. Quem informou **nome social** ao TSE é identificado por ele — o nome de registro dessa pessoa não é guardado.
 - Candidatura sem totalização no arquivo (`#NULO`, ex.: indeferida ou renúncia) entra sem situação. Em 2026 o campo de situação da candidatura vem vazio (`#NE`) para todos.
 - Workflow *Candidatos TSE 2026*: diário até 18/12 (depois, manual). Baixa o zip, importa, escreve na página da execução a contagem por cargo, UF e situação e, com os secrets do banco, aplica as migrações e grava em `candidato_tse`.
 
