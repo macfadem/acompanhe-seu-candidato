@@ -16,6 +16,8 @@ import { RAIZ_REPO } from './apoio.js';
 import { arquivoDeColeta, coletaSenado, PAPEIS_SUPABASE, PASTA_MIGRACOES } from './banco-apoio.js';
 
 const URL_TESTE = process.env.TEST_DATABASE_URL;
+// No CI a integração é obrigatória: sem o banco, falha em vez de pular em silêncio.
+if (process.env.CI === 'true' && !URL_TESTE) throw new Error('TEST_DATABASE_URL não definida no CI.');
 const executar = promisify(execFile);
 const TSX = path.join(RAIZ_REPO, 'node_modules', '.bin', 'tsx');
 const CLI = path.join(RAIZ_REPO, 'packages', 'pipeline', 'src', 'banco-cli.ts');
@@ -50,6 +52,9 @@ describe.skipIf(!URL_TESTE)('Postgres de verdade (pg)', () => {
 
   afterAll(async () => {
     await db?.fechar();
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      console.log('::notice title=Integração pg::Testes de integração rodaram num Postgres de verdade (services.postgres).');
+    }
   });
 
   it('aplica as migrações uma vez só', async () => {
