@@ -21,6 +21,7 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/placar.ts            conferência do placar com o texto oficial
   src/gravar.ts            gravação no Postgres: transação, idempotente
   src/spike/               spike de notícias (GDELT)
+  src/relatorio.ts         resumo e avisos (terminal e página da execução no GitHub)
   src/cli.ts               linha de comando da coleta
 packages/colinha/          núcleo da colinha no navegador (nada vai ao servidor)
 supabase/migrations/       esquema do banco (Postgres/Supabase) com RLS
@@ -88,6 +89,8 @@ Quando algo dá errado:
 - **Falha pontual** numa votação (rede, erro 5xx que persiste): ela fica de fora com aviso `falha_coleta`, e a coleta seguinte (últimos 7 dias) tenta de novo.
 - **Formato desconhecido** numa votação: ela fica de fora com aviso `formato_inesperado` e o problema resumido; o resto é gravado e a execução termina com erro, para o workflow avisar por e-mail.
 - **A lista de votações mudou de formato:** a coleta para inteira, com erro claro.
+
+No GitHub Actions, a página de cada execução mostra um resumo com a tabela de avisos (com link para a API de cada votação), e os primeiros avisos aparecem como anotações. O JSON completo fica como artefato por 30 dias.
 
 ## Banco (Supabase)
 
