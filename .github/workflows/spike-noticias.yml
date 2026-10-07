@@ -1,0 +1,82 @@
+name: Spike de notícias (GDELT)
+
+# Manual: coleta as votações dos últimos dias (padrão 85, a janela da GDELT), sorteia a
+# amostra com semente fixa, consulta a GDELT e guarda o CSV e o resumo como artefato.
+# A cobertura aparece em anotações e no resumo da página da execução.
+on:
+  # TEMPORÁRIO: só para a primeira execução no branch (um workflow novo só aceita
+  # workflow_dispatch depois de estar na main). Sai antes do merge.
+  push:
+    branches: [spike-noticias-actions]
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Dias de votações a coletar (1 a 85; a GDELT só busca nos últimos ~3 meses)'
+        required: false
+        default: '85'
+      semente:
+        description: 'Semente do sorteio (mesma semente = mesma amostra)'
+        required: false
+        default: '20261007'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spike-noticias
+  cancel-in-progress: false
+
+jobs:
+  spike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Entradas passam por variáveis de ambiente (nunca interpoladas direto no script).
+      - name: Período
+        id: periodo
+        env:
+          DIAS: ${{ inputs.dias || '85' }}
+        run: |
+          if ! [[ "$DIAS" =~ ^[0-9]+$ ]] || (( DIAS < 1 || DIAS > 85 )); then
+            echo "::error title=Entrada inválida::dias deve ser um inteiro de 1 a 85"
+            exit 1
+          fi
+          ate=$(TZ=America/Sao_Paulo date +%F)
+          de=$(date -d "$ate -$DIAS days" +%F)
+          echo "de=$de" >> "$GITHUB_OUTPUT"
+          echo "ate=$ate" >> "$GITHUB_OUTPUT"
+          echo "Período: $de a $ate"
+      # Uma votação em formato desconhecido faz a coleta terminar com erro, mas o arquivo
+      # é gravado e serve para o spike; os avisos da coleta aparecem como anotações.
+      - name: Coletar votações
+        continue-on-error: true
+        env:
+          DE: ${{ steps.periodo.outputs.de }}
+          ATE: ${{ steps.periodo.outputs.ate }}
+        run: npm run votacoes -- --de "$DE" --ate "$ATE"
+      - name: Consultar a GDELT
+        env:
+          DE: ${{ steps.periodo.outputs.de }}
+          ATE: ${{ steps.periodo.outputs.ate }}
+          SEMENTE: ${{ inputs.semente || '20261007' }}
+        run: npm run spike:noticias -- --arquivo "dados/votacoes_${DE}_${ATE}.json" --semente "$SEMENTE" --artefato spike-noticias
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: spike-noticias
+          path: packages/pipeline/dados/spike/
+          retention-days: 30
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: votacoes-spike
+          path: packages/pipeline/dados/votacoes_*.json
+          retention-days: 30
+          if-no-files-found: warn
