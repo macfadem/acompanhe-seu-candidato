@@ -4,10 +4,6 @@ name: Spike de notícias (GDELT)
 # amostra com semente fixa, consulta a GDELT e guarda o CSV e o resumo como artefato.
 # A cobertura aparece em anotações e no resumo da página da execução.
 on:
-  # TEMPORÁRIO: só para a primeira execução no branch (um workflow novo só aceita
-  # workflow_dispatch depois de estar na main). Sai antes do merge.
-  push:
-    branches: [spike-noticias-actions]
   workflow_dispatch:
     inputs:
       dias:
