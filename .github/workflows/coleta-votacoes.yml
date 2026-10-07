@@ -1,0 +1,49 @@
+name: Coleta de votações
+
+# Roda todo dia e guarda o JSON como artefato. Falha (e avisa por e-mail do GitHub)
+# se uma API mudar de formato — é o nosso alarme até o banco estar ligado.
+on:
+  schedule:
+    - cron: '17 9 * * *' # 06:17 em Brasília
+  workflow_dispatch:
+    inputs:
+      de:
+        description: 'Data inicial (AAAA-MM-DD). Vazio = 7 dias atrás'
+        required: false
+      ate:
+        description: 'Data final (AAAA-MM-DD). Vazio = hoje'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coleta-votacoes
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Entradas passam por variáveis de ambiente (nunca interpoladas direto no script).
+      - name: Coletar
+        env:
+          DE: ${{ inputs.de }}
+          ATE: ${{ inputs.ate }}
+        run: |
+          args=()
+          if [ -n "$DE" ]; then args+=(--de "$DE"); fi
+          if [ -n "$ATE" ]; then args+=(--ate "$ATE"); fi
+          npm run votacoes -- "${args[@]}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: votacoes
+          path: packages/pipeline/dados/
+          retention-days: 30

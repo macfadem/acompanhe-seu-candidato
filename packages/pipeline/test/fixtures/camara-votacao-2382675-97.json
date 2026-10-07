@@ -1,0 +1,33 @@
+{
+  "dados": {
+    "id": "2382675-97",
+    "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2382675-97",
+    "data": "2026-06-17",
+    "dataHoraRegistro": "2026-06-17T18:54:03",
+    "siglaOrgao": "PLEN",
+    "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
+    "idOrgao": 180,
+    "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/82555",
+    "idEvento": 82555,
+    "descricao": "Aprovado o Substitutivo ao Projeto de Lei nº 4.133, de 2023, adotado pelo relator da Comissão de Ciência, Tecnologia e Inovação. Sim: 308; Não: 129; Abstenção: 1; Total: 438.",
+    "aprovacao": 1,
+    "descUltimaAberturaVotacao": "Votação em turno único.",
+    "dataHoraUltimaAberturaVotacao": "2026-06-17T18:32:02",
+    "ultimaApresentacaoProposicao": {
+      "dataHoraRegistro": "2026-06-17T18:16:27",
+      "descricao": "Parecer proferido em Plenário pelo Relator, Dep. Rodrigo Rollemberg (PSB-DF) pela:\r\n• Comissão de Ciência, Tecnologia e Inovação, que conclui pela aprovação do Projeto de Lei nº 4.133, de 2023, com o Substitutivo adotado.\r\n• Comissão de Desenvolvimento Econômico, que conclui pela aprovação do Projeto de Lei nº 4.133, de 2023, na forma do Substitutivo adotado pelo relator da Comissão de Ciência, Tecnologia e Inovação.\r\n• Comissão de Constituição e Justiça e de Cidadania, que conclui pela constitucionalidade, juridicidade e boa técnica legislativa do Projeto de Lei nº 4.133, de 2023, e do Substitutivo adotado pelo relator da Comissão de Ciência, Tecnologia e Inovação.",
+      "uriProposicaoCitada": "https://dadosabertos.camara.leg.br/api/v2/proposicoes/2633552"
+    },
+    "efeitosRegistrados": [],
+    "objetosPossiveis": [
+      {"id":2633548,"uri":"https://dadosabertos.camara.leg.br/api/v2/proposicoes/2633548","siglaTipo":"SBT","codTipo":255,"numero":1,"ano":0,"ementa":"","dataApresentacao":"2026-06-17T18:15"},
+      {"id":2633474,"uri":"https://dadosabertos.camara.leg.br/api/v2/proposicoes/2633474","siglaTipo":"PRLP","codTipo":891,"numero":3,"ano":0,"ementa":"Parecer Preliminar de Plenário ao Projeto de Lei nº 4.133, de 2023, que Dispõe sobre diretrizes para a formulação da política industrial, tecnológica e de comércio exterior brasileira.","dataApresentacao":"2026-06-17T17:26"}
+    ],
+    "proposicoesAfetadas": [
+      {"id":2382675,"uri":"https://dadosabertos.camara.leg.br/api/v2/proposicoes/2382675","siglaTipo":"PL","codTipo":139,"numero":4133,"ano":2023,"ementa":"Dispõe sobre diretrizes para a formulação da política industrial, tecnológica e de comércio exterior brasileira.","dataApresentacao":"2023-08-24T16:02"}
+    ]
+  },
+  "links": [
+    {"rel":"self","href":"https://dadosabertos.camara.leg.br/api/v2/votacoes/2382675-97"}
+  ]
+}

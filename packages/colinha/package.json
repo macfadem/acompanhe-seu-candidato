@@ -1,0 +1,25 @@
+{
+  "name": "@acompanhe/colinha",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Núcleo da colinha no navegador: formato, salvar/carregar, exportar/importar sem enviar nada ao servidor.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
