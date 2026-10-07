@@ -1,66 +1,79 @@
 name: Candidatos TSE 2026
 
+# Importa deputados federais e senadores de 2026 (com a situação da totalização) do arquivo
+# de candidatos do TSE. Fonte: TSE — Portal de Dados Abertos (CC-BY).
+# Grava no banco só se o secret SUPABASE_DB_URL existir; sempre guarda o JSON como artefato.
 on:
-  # TEMPORÁRIO: descoberta do cabeçalho real no branch. Sai antes do merge.
+  # TEMPORÁRIO: só para a primeira execução no branch (um workflow novo só aceita
+  # workflow_dispatch depois de estar na main). Sai antes do merge.
   push:
     branches: [candidatos-tse]
+  schedule:
+    - cron: '41 10 * * *' # 07:41 em Brasília; o TSE atualiza o arquivo 4x por dia
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: candidatos-tse
+  cancel-in-progress: false
+
 jobs:
-  inspecionar:
+  importar:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Só diz SE o secret existe; o valor fica restrito ao passo que grava.
+      BANCO_CONFIGURADO: ${{ secrets.SUPABASE_DB_URL != '' }}
     steps:
-      - name: Baixar e inspecionar consulta_cand_2026.zip
+      # Depois da diplomação (até 18/12/2026) os dados não mudam: a execução agendada para.
+      - name: Conferir a data
+        id: data
+        env:
+          EVENTO: ${{ github.event_name }}
+        run: |
+          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2026-12-18" ]; then
+            echo "::notice title=Candidatos TSE::Depois de 18/12/2026 a importação só roda manualmente."
+            echo "seguir=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "seguir=sim" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.data.outputs.seguir == 'sim'
+      - uses: actions/setup-node@v7
+        if: steps.data.outputs.seguir == 'sim'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+        if: steps.data.outputs.seguir == 'sim'
+      - name: Baixar o arquivo do TSE
+        if: steps.data.outputs.seguir == 'sim'
         run: |
           set -euo pipefail
-          mkdir -p tse && cd tse
-          curl -fsSL --retry 3 -o cand.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip
-          ls -la cand.zip
-          unzip -o -q cand.zip
-          arquivos=$(ls -1 | grep -v '^cand.zip$' | tr '\n' ' ')
-          echo "::notice title=Arquivos no zip::$(ls -la | awk 'NR>1{print $5" "$9}' | tr '\n' ';')"
-          brasil=$(ls -1 *BRASIL*.csv 2>/dev/null | head -1 || true)
-          [ -z "$brasil" ] && brasil=$(ls -1 *.csv | head -1)
-          echo "arquivo de referência: $brasil"
-          file "$brasil" || true
-          head -c 3 "$brasil" | od -An -tx1
-          cab=$(head -1 "$brasil" | iconv -f latin1 -t utf-8 | tr -d '\r')
-          echo "::notice title=Cabeçalho ($brasil)::$cab"
-          linha=$(sed -n 2p "$brasil" | iconv -f latin1 -t utf-8 | tr -d '\r')
-          echo "::notice title=Linha 2 (amostra)::$linha"
-          total=$(wc -l < "$brasil")
-          # Colunas por nome (campos entre aspas, separados por ;)
-          python3 - "$brasil" <<'PY'
-          import csv, sys, collections
-          f = sys.argv[1]
-          with open(f, encoding='latin-1', newline='') as fh:
-              r = csv.reader(fh, delimiter=';', quotechar='"')
-              cab = next(r)
-              idx = {c: i for i, c in enumerate(cab)}
-              cont = collections.defaultdict(collections.Counter)
-              n = 0
-              alvo = {'DS_CARGO','DS_SIT_TOT_TURNO','DS_SITUACAO_CANDIDATURA','DS_DETALHE_SITUACAO_CAND','CD_SITUACAO_CANDIDATURA','CD_SIT_TOT_TURNO','NR_TURNO','TP_ABRANGENCIA','SG_UE','CD_CARGO','DS_ELEICAO','CD_TIPO_ELEICAO','ST_CANDIDATO_INSERIDO_URNA'}
-              comb = collections.Counter()
-              for linha in r:
-                  n += 1
-                  for c in alvo:
-                      if c in idx and idx[c] < len(linha):
-                          cont[c][linha[idx[c]]] += 1
-                  g = lambda c: linha[idx[c]] if c in idx and idx[c] < len(linha) else '?'
-                  if g('DS_CARGO') in ('DEPUTADO FEDERAL','SENADOR'):
-                      comb[(g('DS_CARGO'), g('DS_SITUACAO_CANDIDATURA'), g('DS_SIT_TOT_TURNO'))] += 1
-          def nota(t, m):
-              m = m.replace('%','%25').replace('\n','%0A')
-              print(f"::notice title={t}::{m}")
-          nota(f'Linhas e colunas', f'{n} linhas, {len(cab)} colunas; ausentes: ' + ','.join(sorted(c for c in alvo if c not in idx)))
-          lin = []
-          for c in sorted(alvo):
-              if c in cont:
-                  lin.append(c + ': ' + ' | '.join(f'{k}={v}' for k, v in cont[c].most_common(25)))
-          nota('Valores por coluna', '\n'.join(lin))
-          nota('Dep. federal e senador: cargo / situação candidatura / situação totalização', '\n'.join(f'{a} / {b} / {c}: {v}' for (a,b,c), v in sorted(comb.items())))
-          PY
+          mkdir -p "$RUNNER_TEMP/tse"
+          curl -fsSL --retry 3 --retry-delay 10 -o "$RUNNER_TEMP/tse/cand.zip" \
+            https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip
+          unzip -o -q "$RUNNER_TEMP/tse/cand.zip" consulta_cand_2026_BRASIL.csv -d "$RUNNER_TEMP/tse" || {
+            echo "::error title=Candidatos TSE::consulta_cand_2026_BRASIL.csv não está no zip — o TSE mudou o pacote."
+            exit 1
+          }
+      - name: Importar (sem banco)
+        if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO != 'true'
+        run: npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv"
+      - name: Importar e gravar no banco
+        if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_CA: ${{ secrets.SUPABASE_DB_CA }}
+        run: |
+          npm run migrar
+          npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv" --gravar
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.data.outputs.seguir == 'sim' }}
+        with:
+          name: candidatos-tse
+          path: packages/pipeline/dados/candidatos_tse_*.json
+          retention-days: 30
+          if-no-files-found: warn
