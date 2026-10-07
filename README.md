@@ -2,7 +2,7 @@
 
 Web app público e gratuito: o eleitor monta a colinha das eleições de 2026 e, depois da eleição, acompanha os deputados federais e senadores que escolheu — votações, notícias e um resumo semanal neutro, sempre com link para a fonte oficial.
 
-> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco (falta escolher o driver), núcleo da colinha e o script do spike de notícias. Próximo: projeto no Supabase, candidatos do TSE e o app.
+> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco via `pg` (liga quando os secrets existirem), núcleo da colinha e o script do spike de notícias. Próximo: projeto no Supabase, candidatos do TSE e o app.
 
 ## Princípios
 
@@ -20,6 +20,9 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/categorias.ts        tradução dos códigos de voto para categorias neutras
   src/placar.ts            conferência do placar com o texto oficial
   src/gravar.ts            gravação no Postgres: transação, idempotente
+  src/conexao.ts           conexão `pg` com SSL validado (verify-full)
+  src/migrar.ts            aplica as migrações pendentes
+  src/banco-cli.ts         linha de comando: npm run migrar / npm run gravar
   src/spike/               spike de notícias (GDELT)
   src/cli.ts               linha de comando da coleta
 packages/colinha/          núcleo da colinha no navegador (nada vai ao servidor)
@@ -34,6 +37,8 @@ Requisitos: Node.js 22.12 ou mais novo (o CI usa o 24).
 ```bash
 npm install
 npm test             # todos os testes (inclui o banco num Postgres em memória)
+# Com um Postgres descartável, roda também a integração pelo driver pg (APAGA o schema public):
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres npm test
 npm run typecheck
 
 # Coleta votações e grava packages/pipeline/dados/votacoes_<de>_<ate>.json
@@ -94,8 +99,34 @@ Quando algo dá errado:
 O Supabase é um Postgres gerenciado com API, armazenamento de arquivos e funções. Aqui ele guarda **só dados públicos**: os jobs gravam; o site lê.
 
 - `supabase/migrations/` cria `parlamentar`, `votacao` e `voto`. Leitura pública; escrita só pelos jobs. Os testes confirmam que um visitante anônimo lê, mas não escreve.
-- `gravarColeta()` grava numa transação (tudo ou nada), pode repetir sem duplicar, substitui votos corrigidos pela fonte e nunca apaga votos por causa de uma falha passageira. Falta escolher o driver de conexão.
-- Os jobs vão conectar pelo pooler do Supabase em modo sessão (IPv4), com a conexão guardada em GitHub Secrets — nunca no código.
+- `npm run migrar` aplica as migrações pendentes, cada uma na sua transação, e registra em `supabase_migrations.schema_migrations` (a mesma tabela da CLI do Supabase).
+- `npm run gravar` valida os arquivos `dados/votacoes_*.json` inteiros e só então grava, com `gravarColeta()`: uma transação por arquivo (tudo ou nada), pode repetir sem duplicar, substitui votos corrigidos pela fonte e nunca apaga votos por causa de uma falha passageira.
+- Driver: `pg` (node-postgres), uma conexão por execução.
+
+### Como ligar (uma vez)
+
+1. **Criar o projeto:** em [supabase.com](https://supabase.com) → *New project*, região **South America (São Paulo)**. Guarde a senha do banco num gerenciador de senhas.
+2. **Pegar a conexão:** botão **Connect** no topo do projeto → **Session pooler** (porta 5432, funciona em IPv4 — a conexão direta não serve para o GitHub Actions). Formato: `postgresql://postgres.<ref>:<senha>@<host do pooler>:5432/postgres`. Se a senha tiver caracteres especiais, use-a codificada (ex.: `@` vira `%40`).
+3. **Baixar o certificado:** *Project Settings* → *Database* → **SSL Configuration** → *Download certificate* (`prod-ca-2021.crt`). Com ele a conexão valida o servidor (equivale a `sslmode=verify-full`); sem ele, o código se recusa a conectar.
+4. **Cadastrar os secrets** no GitHub: *Settings* → *Secrets and variables* → *Actions* → *New repository secret*:
+   - `SUPABASE_DB_URL` = a conexão do passo 2;
+   - `SUPABASE_DB_CA` = o conteúdo inteiro do arquivo `.crt` (de `-----BEGIN CERTIFICATE-----` a `-----END CERTIFICATE-----`).
+5. **Aplicar as migrações e gravar:** Actions → *Coleta de votações* → *Run workflow* (de preferência com um período, ex.: 2026-01-01 a hoje). Com os secrets cadastrados, o workflow aplica as migrações pendentes e grava. Sem eles, só gera o artefato e avisa.
+
+Opcional, do seu computador (a URL e o certificado ficam só em variáveis de ambiente — nunca em arquivo do repositório):
+
+```bash
+export SUPABASE_DB_URL='postgresql://postgres.<ref>:<senha>@<host>:5432/postgres'
+export SUPABASE_DB_CA="$(cat ~/Downloads/prod-ca-2021.crt)"
+npm run migrar
+npm run gravar -- --arquivo dados/votacoes_2026-06-01_2026-06-30.json
+```
+
+### Segurança da conexão
+
+- A URL só existe no secret e no passo de gravação do workflow; `npm ci` e a coleta não a recebem. Mensagens de erro passam por um filtro que remove a URL e a senha.
+- Parâmetros como `?sslmode=disable` na URL são ignorados: fora de `localhost`, o SSL sempre valida o certificado e o nome do servidor.
+- O CI testa a gravação num Postgres de verdade (`services: postgres`), inclusive pela linha de comando e com senha errada (a senha não aparece na saída).
 
 ## Colinha (`packages/colinha`)
 
