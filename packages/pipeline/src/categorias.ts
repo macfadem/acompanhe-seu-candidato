@@ -15,7 +15,7 @@ const COMUNS = new Map<string, CategoriaVoto>([
   ['obstrucao', 'obstrucao'],
 ]);
 
-/** Códigos de `siglaVotoParlamentar` observados na API do Senado (junho/2026). */
+/** Códigos de `siglaVotoParlamentar` observados na API do Senado (junho a outubro/2026). */
 const SENADO = new Map<string, CategoriaVoto>([
   ['votou', 'secreto'], // votação secreta: só os totais são públicos
   ['ap', 'ausente_justificado'], // Atividade parlamentar
@@ -24,6 +24,7 @@ const SENADO = new Map<string, CategoriaVoto>([
   ['lp', 'licenca'], // Licença particular
   ['lap', 'licenca'], // Licença paternidade ou ao adotante
   ['p-nrv', 'presente_sem_voto'], // Presente – não registrou voto
+  ['ncom', 'nao_compareceu'], // Não Compareceu (visto em 03/09/2026, PLP 74/2026)
 ]);
 
 /**

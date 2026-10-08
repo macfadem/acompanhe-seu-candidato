@@ -76,6 +76,7 @@ Gera em `packages/pipeline/dados/spike/` um CSV para revisar à mão (colunas `r
 | `ausente_justificado` | AP (atividade parlamentar), MIS (missão) |
 | `licenca` | LS, LP, LAP |
 | `presente_sem_voto` | P-NRV |
+| `nao_compareceu` | NCom — "Não Compareceu" (só no Senado: a Câmara não lista quem não votou) |
 | `presidente` | Presidente (art. 51 RISF), Art. 17 |
 | `secreto` | votação secreta — a escolha não é pública, só a participação. Senado: "Votou". Câmara: voto vazio (`null`) em todos os registros, ex.: escolha de ministro do TCU |
 | `outro` | código ainda não mapeado (sempre gera aviso) |

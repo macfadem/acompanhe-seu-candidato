@@ -14,6 +14,7 @@ export const CATEGORIAS_VOTO = [
   'ausente_justificado', // atividade parlamentar ou missão oficial
   'licenca', // licença saúde, particular, paternidade etc.
   'presente_sem_voto', // presente, mas não registrou voto
+  'nao_compareceu', // registro oficial "Não compareceu" (Senado; a Câmara não lista quem não votou)
   'presidente', // presidindo a sessão
   'secreto', // votou em votação secreta: a escolha não é pública
   'outro', // código ainda não mapeado — sempre gera aviso
