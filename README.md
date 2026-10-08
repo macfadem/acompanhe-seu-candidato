@@ -2,7 +2,7 @@
 
 Web app público e gratuito: o eleitor monta a colinha das eleições de 2026 e, depois da eleição, acompanha os deputados federais e senadores que escolheu — votações, notícias e um resumo semanal neutro, sempre com link para a fonte oficial.
 
-> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco via `pg` (liga quando os secrets existirem), núcleo da colinha e o script do spike de notícias. Próximo: projeto no Supabase, candidatos do TSE e o app.
+> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco via `pg` (liga quando os secrets existirem), núcleo da colinha e o script do spike de notícias. importador de candidatos do TSE 2026. Próximo: projeto no Supabase, vínculo TSE ↔ Câmara/Senado e o app.
 
 ## Princípios
 
@@ -23,6 +23,8 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/conexao.ts           conexão `pg` com SSL validado (verify-full)
   src/migrar.ts            aplica as migrações pendentes
   src/banco-cli.ts         linha de comando: npm run migrar / npm run gravar
+  src/tse/                 candidatos do TSE: leitor de CSV, importador e gravação
+  src/tse-cli.ts           linha de comando: npm run candidatos
   src/spike/               spike de notícias (GDELT)
   src/relatorio.ts         resumo e avisos (terminal e página da execução no GitHub)
   src/cli.ts               linha de comando da coleta
@@ -69,6 +71,22 @@ npm run spike:noticias -- --arquivo dados/votacoes_2026-07-10_2026-10-07.json
 
 Gera em `packages/pipeline/dados/spike/` um CSV para revisar à mão (colunas `relevante` e `homonimo`) e um resumo com o critério de decisão.
 
+## Candidatos do TSE 2026
+
+Importa deputados federais e senadores do arquivo de candidatos do TSE, com a **situação da totalização** (eleito por QP, eleito por média, eleito, suplente, não eleito). Fonte: TSE — Portal de Dados Abertos (licença CC-BY).
+
+- Arquivo: `consulta_cand_2026_BRASIL.csv`, dentro de [`consulta_cand_2026.zip`](https://dadosabertos.tse.jus.br/dataset/candidatos-2026) — Latin-1, separado por `;`.
+- O leitor é guiado pelo **cabeçalho** (conferido no arquivo real de 07/10/2026, 50 colunas): a ordem pode mudar; coluna obrigatória ausente é erro.
+- **Privacidade:** o arquivo traz CPF, título de eleitor, e-mail, data de nascimento, gênero, cor/raça e outros dados pessoais. Só as colunas necessárias são lidas; nada disso vai para o banco, para o JSON ou para o resumo. Quem informou **nome social** ao TSE é identificado por ele — o nome de registro dessa pessoa não é guardado.
+- Candidatura sem totalização no arquivo (`#NULO`, ex.: indeferida ou renúncia) entra sem situação. Em 2026 o campo de situação da candidatura vem vazio (`#NE`) para todos.
+- Workflow *Candidatos TSE 2026*: diário até 18/12 (depois, manual). Baixa o zip, importa, escreve na página da execução a contagem por cargo, UF e situação e, com os secrets do banco, aplica as migrações e grava em `candidato_tse`.
+
+```bash
+# Baixe e descompacte o zip do TSE, depois:
+npm run candidatos -- --arquivo /caminho/consulta_cand_2026_BRASIL.csv            # só gera dados/candidatos_tse_2026.json
+npm run candidatos -- --arquivo /caminho/consulta_cand_2026_BRASIL.csv --gravar   # grava no banco (secrets no ambiente)
+```
+
 ## O que a coleta faz
 
 1. Lista as votações de **plenário** do período (Câmara: `idOrgao=180`; Senado: `informeLegislativo.siglaColegiado = PLEN`).
@@ -102,7 +120,7 @@ No GitHub Actions, a página de cada execução mostra um resumo com a tabela de
 
 O Supabase é um Postgres gerenciado com API, armazenamento de arquivos e funções. Aqui ele guarda **só dados públicos**: os jobs gravam; o site lê.
 
-- `supabase/migrations/` cria `parlamentar`, `votacao` e `voto`. Leitura pública; escrita só pelos jobs. Os testes confirmam que um visitante anônimo lê, mas não escreve.
+- `supabase/migrations/` cria `parlamentar`, `votacao`, `voto` e `candidato_tse`. Leitura pública; escrita só pelos jobs. Os testes confirmam que um visitante anônimo lê, mas não escreve.
 - `npm run migrar` aplica as migrações pendentes, cada uma na sua transação, e registra em `supabase_migrations.schema_migrations` (a mesma tabela da CLI do Supabase).
 - `npm run gravar` valida os arquivos `dados/votacoes_*.json` inteiros e só então grava, com `gravarColeta()`: uma transação por arquivo (tudo ou nada), pode repetir sem duplicar, substitui votos corrigidos pela fonte e nunca apaga votos por causa de uma falha passageira.
 - Driver: `pg` (node-postgres), uma conexão por execução.
@@ -142,6 +160,7 @@ npm run gravar -- --arquivo dados/votacoes_2026-06-01_2026-06-30.json
 
 - Câmara dos Deputados — Dados Abertos: https://dadosabertos.camara.leg.br
 - Senado Federal — Dados Abertos: https://legis.senado.leg.br/dadosabertos
+- TSE — Portal de Dados Abertos (CC-BY): https://dadosabertos.tse.jus.br
 - GDELT (só no spike): https://api.gdeltproject.org/api/v2/doc/doc
 
 ## Licença

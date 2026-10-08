@@ -44,7 +44,7 @@ function insertMultiplo(tabela: string, colunas: readonly string[], linhas: read
   return { sql: `insert into public.${tabela} (${colunas.join(', ')}) values ${valores.join(', ')}`, params };
 }
 
-async function emLotes(
+export async function emLotes(
   db: ConexaoSql,
   tabela: string,
   linhas: readonly Linha[],

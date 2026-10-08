@@ -4,6 +4,7 @@
  * ATENÇÃO: apaga e recria o schema public desse banco.
  */
 import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,6 +13,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type ConexaoPg, conectar, lerConfigConexao } from '../src/conexao.js';
 import { gravarColeta } from '../src/gravar.js';
 import { aplicarMigracoes, lerMigracoes } from '../src/migrar.js';
+import { lerCandidatos } from '../src/tse/candidatos.js';
+import { decodificarLatin1 } from '../src/tse/csv.js';
+import { gravarCandidatos } from '../src/tse/gravar-candidatos.js';
 import { RAIZ_REPO } from './apoio.js';
 import { arquivoDeColeta, coletaSenado, PAPEIS_SUPABASE, PASTA_MIGRACOES } from './banco-apoio.js';
 
@@ -72,6 +76,14 @@ describe.skipIf(!URL_TESTE)('Postgres de verdade (pg)', () => {
     quebrada.votos.push({ ...quebrada.votos[0]!, parlamentarId: 'senado:inexistente' });
     await expect(gravarColeta(db, quebrada)).rejects.toThrow();
     expect(await contar(db, 'voto')).toBe(243);
+  });
+
+  it('candidatos do TSE: grava e repete sem duplicar', async () => {
+    const csv = readFileSync(path.join(RAIZ_REPO, 'packages/pipeline/test/fixtures/tse-consulta-cand-2026-sintetico.csv'));
+    const { candidatos } = lerCandidatos(decodificarLatin1(csv));
+    expect(await gravarCandidatos(db, candidatos)).toEqual({ novos: 7, atualizados: 0, mantidos: 0 });
+    expect(await gravarCandidatos(db, candidatos)).toEqual({ novos: 0, atualizados: 7, mantidos: 0 });
+    expect(await contar(db, 'candidato_tse')).toBe(7);
   });
 
   it('visitante anônimo lê, mas não escreve (RLS)', async () => {

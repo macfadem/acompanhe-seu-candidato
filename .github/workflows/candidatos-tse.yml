@@ -1,0 +1,75 @@
+name: Candidatos TSE 2026
+
+# Importa deputados federais e senadores de 2026 (com a situação da totalização) do arquivo
+# de candidatos do TSE. Fonte: TSE — Portal de Dados Abertos (CC-BY).
+# Grava no banco só se o secret SUPABASE_DB_URL existir; sempre guarda o JSON como artefato.
+on:
+  schedule:
+    - cron: '41 10 * * *' # 07:41 em Brasília; o TSE atualiza o arquivo 4x por dia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidatos-tse
+  cancel-in-progress: false
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Só diz SE o secret existe; o valor fica restrito ao passo que grava.
+      BANCO_CONFIGURADO: ${{ secrets.SUPABASE_DB_URL != '' }}
+    steps:
+      # Depois da diplomação (até 18/12/2026) os dados não mudam: a execução agendada para.
+      - name: Conferir a data
+        id: data
+        env:
+          EVENTO: ${{ github.event_name }}
+        run: |
+          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2026-12-18" ]; then
+            echo "::notice title=Candidatos TSE::Depois de 18/12/2026 a importação só roda manualmente."
+            echo "seguir=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "seguir=sim" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.data.outputs.seguir == 'sim'
+      - uses: actions/setup-node@v7
+        if: steps.data.outputs.seguir == 'sim'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+        if: steps.data.outputs.seguir == 'sim'
+      - name: Baixar o arquivo do TSE
+        if: steps.data.outputs.seguir == 'sim'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tse"
+          curl -fsSL --retry 3 --retry-delay 10 -o "$RUNNER_TEMP/tse/cand.zip" \
+            https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip
+          unzip -o -q "$RUNNER_TEMP/tse/cand.zip" consulta_cand_2026_BRASIL.csv -d "$RUNNER_TEMP/tse" || {
+            echo "::error title=Candidatos TSE::consulta_cand_2026_BRASIL.csv não está no zip — o TSE mudou o pacote."
+            exit 1
+          }
+      - name: Importar (sem banco)
+        if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO != 'true'
+        run: npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv"
+      - name: Importar e gravar no banco
+        if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_CA: ${{ secrets.SUPABASE_DB_CA }}
+        run: |
+          npm run migrar
+          npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv" --gravar
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.data.outputs.seguir == 'sim' }}
+        with:
+          name: candidatos-tse
+          path: packages/pipeline/dados/candidatos_tse_*.json
+          retention-days: 30
+          if-no-files-found: warn

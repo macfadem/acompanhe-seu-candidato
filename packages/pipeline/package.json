@@ -14,7 +14,8 @@
     "migrar": "tsx src/banco-cli.ts migrar",
     "gravar": "tsx src/banco-cli.ts gravar",
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "candidatos": "tsx src/tse-cli.ts"
   },
   "dependencies": {
     "pg": "^8.23.1",
