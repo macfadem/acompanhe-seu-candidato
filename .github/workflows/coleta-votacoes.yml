@@ -1,7 +1,8 @@
 name: Coleta de votações
 
-# Roda todo dia e guarda o JSON como artefato. Falha (e avisa por e-mail do GitHub)
-# se uma API mudar de formato — é o nosso alarme até o banco estar ligado.
+# Roda todo dia, guarda o JSON como artefato e, se o secret SUPABASE_DB_URL existir,
+# aplica as migrações pendentes e grava no banco. Falha (e avisa por e-mail do GitHub)
+# se uma API mudar de formato.
 on:
   schedule:
     - cron: '17 9 * * *' # 06:17 em Brasília
@@ -25,6 +26,10 @@ jobs:
   coletar:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Só diz SE o secret existe (secrets não podem ir direto num "if:"). O valor fica
+      # restrito ao passo de gravação — npm ci e a coleta nunca o recebem.
+      BANCO_CONFIGURADO: ${{ secrets.SUPABASE_DB_URL != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -49,3 +54,16 @@ jobs:
           name: votacoes
           path: packages/pipeline/dados/
           retention-days: 30
+      # Grava mesmo quando a coleta termina com erro por uma votação fora do formato
+      # (o arquivo traz o resto), mas não se nenhum arquivo foi gerado.
+      - name: Gravar no banco
+        if: ${{ !cancelled() && env.BANCO_CONFIGURADO == 'true' && hashFiles('packages/pipeline/dados/votacoes_*.json') != '' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_CA: ${{ secrets.SUPABASE_DB_CA }}
+        run: |
+          npm run migrar
+          npm run gravar
+      - name: Banco não configurado
+        if: ${{ env.BANCO_CONFIGURADO != 'true' }}
+        run: echo "::notice title=Banco::SUPABASE_DB_URL não cadastrado — a coleta só gerou o artefato. Veja o README (Banco)."
