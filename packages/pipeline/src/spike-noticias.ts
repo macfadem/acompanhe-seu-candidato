@@ -1,6 +1,7 @@
 /**
  * Spike de notícias: mede se a GDELT encontra matérias sobre uma amostra de
- * parlamentares e de votações recentes. Roda no seu computador (precisa de internet).
+ * parlamentares e de votações recentes. Roda no computador ou no GitHub Actions
+ * (workflow "Spike de notícias"), onde também escreve o resumo na página da execução.
  *
  *   npm run votacoes -- --de 2026-07-10 --ate 2026-10-07
  *   npm run spike:noticias -- --arquivo dados/votacoes_2026-07-10_2026-10-07.json
@@ -9,8 +10,17 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { hojeEmBrasilia } from './datas.js';
+import { escreverResumoExecucao, noGithubActions, urlExecucao } from './github.js';
 import { criarCliente } from './http.js';
-import { ArquivoColeta, executarSpike, montarAlvos, paraCsv, paraResumo } from './spike/executar.js';
+import {
+  anotacoesSpike,
+  ArquivoColeta,
+  executarSpike,
+  instrucoesDownload,
+  montarAlvos,
+  paraCsv,
+  paraResumo,
+} from './spike/executar.js';
 import { validar } from './validar.js';
 
 const AJUDA = `Uso: npm run spike:noticias -- --arquivo dados/votacoes_<de>_<ate>.json [opções]
@@ -21,7 +31,9 @@ const AJUDA = `Uso: npm run spike:noticias -- --arquivo dados/votacoes_<de>_<ate
   --senadores N        quantos senadores sortear (padrão: 6)
   --votacoes N         quantas votações sortear (padrão: 10)
   --intervalo S        segundos entre consultas (padrão: 6)
-  --saida PASTA        onde gravar CSV e resumo (padrão: dados/spike)`;
+  --saida PASTA        onde gravar CSV e resumo (padrão: dados/spike)
+  --prazo MIN          para de consultar depois de MIN minutos (padrão: 0 = sem prazo)
+  --artefato NOME      nome do artefato no GitHub Actions, citado no resumo (padrão: spike-noticias)`;
 
 function inteiro(valor: string, nome: string, minimo: number): number {
   const n = Number(valor);
@@ -39,6 +51,8 @@ async function main(): Promise<void> {
       votacoes: { type: 'string', default: '10' },
       intervalo: { type: 'string', default: '6' },
       saida: { type: 'string', default: path.join('dados', 'spike') },
+      artefato: { type: 'string', default: 'spike-noticias' },
+      prazo: { type: 'string', default: '0' },
       ajuda: { type: 'boolean', short: 'h', default: false },
     },
     strict: true,
@@ -66,22 +80,35 @@ async function main(): Promise<void> {
 
   const minutos = Math.ceil((alvos.length * opcoes.intervaloMs) / 60_000);
   console.log(`Consultando a GDELT para ${alvos.length} alvos (~${minutos} min)…`);
-  const cliente = criarCliente({ tentativas: 3, esperaBaseMs: 10_000 });
+  const actions = noGithubActions();
+  // Limites curtos por consulta: uma GDELT lenta não pode consumir o prazo inteiro.
+  const cliente = criarCliente({ tentativas: 4, esperaBaseMs: 10_000, esperaMaxMs: 30_000, timeoutMs: 20_000 });
+  const prazoMs = inteiro(values.prazo, 'prazo', 0) * 60_000;
   const resultados = await executarSpike(alvos, cliente, {
     intervaloMs: opcoes.intervaloMs,
-    aoProgredir: (i) => process.stdout.write(`\r${i + 1}/${alvos.length}`),
+    prazoMs: prazoMs || undefined,
+    // No log do Actions, "\r" não reescreve a linha: imprime de 5 em 5.
+    aoProgredir: actions
+      ? (i) => (i % 5 === 0 || i === alvos.length - 1) && console.log(`${i + 1}/${alvos.length}`)
+      : (i) => process.stdout.write(`\r${i + 1}/${alvos.length}`),
   });
-  process.stdout.write('\n');
+  if (!actions) process.stdout.write('\n');
 
   await mkdir(values.saida, { recursive: true });
   const base = path.join(values.saida, `spike-noticias_${opcoes.hoje}`);
   await writeFile(`${base}.csv`, paraCsv(resultados), 'utf8');
-  await writeFile(
-    `${base}.md`,
-    paraResumo(resultados, { arquivo: values.arquivo, semente: opcoes.semente, geradoEm: new Date().toISOString() }),
-    'utf8',
-  );
+  const resumo = paraResumo(resultados, {
+    arquivo: path.basename(values.arquivo),
+    semente: opcoes.semente,
+    geradoEm: new Date().toISOString(),
+  });
+  await writeFile(`${base}.md`, resumo, 'utf8');
   console.log(`Gravado: ${base}.csv (para revisar) e ${base}.md (resumo)`);
+
+  if (actions) {
+    await escreverResumoExecucao(`${resumo}\n${instrucoesDownload(urlExecucao(), values.artefato)}`);
+    for (const comando of anotacoesSpike(resultados)) console.log(comando);
+  }
 }
 
 main().catch((erro: unknown) => {

@@ -49,24 +49,28 @@ export function urlConsultaGdelt(consulta: string, janela: Janela, maxRegistros 
 
 const semAspas = (texto: string) => texto.replace(/"/g, '').trim();
 
-/** Nome entre aspas + cargo, só veículos do Brasil (reduz homônimos). */
+/*
+ * A GDELT traduz as matérias para o inglês por máquina e busca NA TRADUÇÃO (documentação
+ * da DOC 2.0 API). Por isso os termos de apoio vão em inglês: "deputado" vira "deputy",
+ * "projeto de lei" vira "bill". Nomes e números atravessam a tradução.
+ * (A 1ª rodada do spike, com termos em português, achou 0 matérias para 30 alvos.)
+ */
+
+/** Nome entre aspas + cargo (em inglês, ver acima), só veículos do Brasil (reduz homônimos). */
 export function consultaParlamentar(p: Pick<Parlamentar, 'nome' | 'casa'>): string {
-  const cargo = p.casa === 'camara' ? '(deputado OR deputada)' : '(senador OR senadora)';
+  const cargo = p.casa === 'camara' ? '(deputy OR congressman OR congresswoman)' : 'senator';
   return `"${semAspas(p.nome)}" ${cargo} sourcecountry:brazil`;
 }
 
-const NOMES_TIPO: Record<string, string[]> = {
-  PL: ['projeto de lei'],
-  PLP: ['projeto de lei complementar'],
-  PEC: ['proposta de emenda à constituição', 'PEC'],
-  MPV: ['medida provisória', 'MP'],
-  PDL: ['projeto de decreto legislativo'],
-};
-
-/** Formas como a imprensa costuma escrever o número: "PL 4133/2023", "PL 4.133/2023", "projeto de lei 4.133"… */
+/**
+ * Formas do número que sobrevivem à tradução: "PL 4133/2023", "PL 4.133/2023" e só o
+ * número com o ano ("4133/2023", "4.133/2023", "4,133/2023"), que a tradução não muda.
+ */
 export function variantesNumero(p: Pick<Proposicao, 'sigla' | 'numero' | 'ano'>): string[] {
   const numero = p.numero;
-  const comPonto = Number.isFinite(Number(numero)) ? Number(numero).toLocaleString('pt-BR') : numero;
+  const n = Number(numero);
+  const comPonto = Number.isFinite(n) ? n.toLocaleString('pt-BR') : numero;
+  const comVirgula = Number.isFinite(n) ? n.toLocaleString('en-US') : numero;
   const formas = new Set<string>();
   const siglas = [p.sigla, ...(p.sigla === 'MPV' ? ['MP'] : [])];
   for (const sigla of siglas) {
@@ -77,10 +81,7 @@ export function variantesNumero(p: Pick<Proposicao, 'sigla' | 'numero' | 'ano'>)
       formas.add(`${sigla} ${numero}`);
     }
   }
-  for (const nome of NOMES_TIPO[p.sigla] ?? []) {
-    formas.add(`${nome} ${numero}`);
-    formas.add(`${nome} ${comPonto}`);
-  }
+  if (p.ano) for (const forma of [numero, comPonto, comVirgula]) formas.add(`${forma}/${p.ano}`);
   return [...formas];
 }
 
