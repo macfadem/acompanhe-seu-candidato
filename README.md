@@ -25,6 +25,8 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/banco-cli.ts         linha de comando: npm run migrar / npm run gravar
   src/tse/                 candidatos do TSE: leitor de CSV, importador e gravação
   src/tse-cli.ts           linha de comando: npm run candidatos
+  src/vinculo/             vínculo candidato do TSE ↔ parlamentar (listas oficiais, regra, gravação)
+  src/vinculo-cli.ts       linha de comando: npm run vincular
   src/spike/               spike de notícias (GDELT)
   src/relatorio.ts         resumo e avisos (terminal e página da execução no GitHub)
   src/cli.ts               linha de comando da coleta
@@ -88,12 +90,26 @@ Importa deputados federais e senadores do arquivo de candidatos do TSE, com a **
 - O leitor é guiado pelo **cabeçalho** (conferido no arquivo real de 07/10/2026, 50 colunas): a ordem pode mudar; coluna obrigatória ausente é erro.
 - **Privacidade:** o arquivo traz CPF, título de eleitor, e-mail, data de nascimento, gênero, cor/raça e outros dados pessoais. Só as colunas necessárias são lidas; nada disso vai para o banco, para o JSON ou para o resumo. Quem informou **nome social** ao TSE é identificado por ele — o nome de registro dessa pessoa não é guardado.
 - Candidatura sem totalização no arquivo (`#NULO`, ex.: indeferida ou renúncia) entra sem situação. Em 2026 o campo de situação da candidatura vem vazio (`#NE`) para todos.
-- Workflow *Candidatos TSE 2026*: diário até 18/12 (depois, manual). Baixa o zip, importa, escreve na página da execução a contagem por cargo, UF e situação e, com os secrets do banco, aplica as migrações e grava em `candidato_tse`.
+- Workflow *Candidatos TSE 2026*: diário até 15/02/2027 (depois, manual). Baixa o zip, importa, liga cada candidato ao id da Câmara/Senado, escreve na página da execução as contagens e, com os secrets do banco, aplica as migrações e grava em `candidato_tse` e `vinculo_parlamentar`.
 
 ```bash
 # Baixe e descompacte o zip do TSE, depois:
 npm run candidatos -- --arquivo /caminho/consulta_cand_2026_BRASIL.csv            # só gera dados/candidatos_tse_2026.json
 npm run candidatos -- --arquivo /caminho/consulta_cand_2026_BRASIL.csv --gravar   # grava no banco (secrets no ambiente)
+```
+
+### Vínculo com a Câmara e o Senado
+
+Liga cada candidato ao id do parlamentar (`camara:…` / `senado:…`, o mesmo das votações), para a página do eleito mostrar como ele vota.
+
+- Listas oficiais: deputados das legislaturas 55 a 58 (a 58ª entra quando a Câmara cadastrar os eleitos) e senadores em exercício. Do `deputados.csv` da Câmara só o nome civil é lido (o arquivo também traz CPF e nascimento).
+- **Automático só com par único por nome civil (ou social) + UF.** Sem CPF.
+- O resto vira **sugestão** (só para eleitos) na página da execução: nome de urna igual ao nome parlamentar, nome civil igual em outra UF ou homônimos. Para confirmar ou recusar, edite `packages/pipeline/vinculos-manuais.json` por pull request (`acao`: `vincular` ou `bloquear`); o CI valida o arquivo.
+- Eleito sem id (novato) fica sem vínculo; o workflow tenta de novo todo dia até 15/02/2027.
+
+```bash
+npm run vincular -- --candidatos dados/candidatos_tse_2026.json            # gera dados/vinculos_tse_2026.json
+npm run vincular -- --candidatos dados/candidatos_tse_2026.json --gravar   # e grava no banco
 ```
 
 ## O que a coleta faz
@@ -129,7 +145,7 @@ No GitHub Actions, a página de cada execução mostra um resumo com a tabela de
 
 O Supabase é um Postgres gerenciado com API, armazenamento de arquivos e funções. Aqui ele guarda **só dados públicos**: os jobs gravam; o site lê.
 
-- `supabase/migrations/` cria `parlamentar`, `votacao`, `voto` e `candidato_tse`. Leitura pública; escrita só pelos jobs. Os testes confirmam que um visitante anônimo lê, mas não escreve.
+- `supabase/migrations/` cria `parlamentar`, `votacao`, `voto`, `candidato_tse` e `vinculo_parlamentar`. Leitura pública; escrita só pelos jobs. Os testes confirmam que um visitante anônimo lê, mas não escreve.
 - `npm run migrar` aplica as migrações pendentes, cada uma na sua transação, e registra em `supabase_migrations.schema_migrations` (a mesma tabela da CLI do Supabase).
 - `npm run gravar` valida os arquivos `dados/votacoes_*.json` inteiros e só então grava, com `gravarColeta()`: uma transação por arquivo (tudo ou nada), pode repetir sem duplicar, substitui votos corrigidos pela fonte e nunca apaga votos por causa de uma falha passageira.
 - Driver: `pg` (node-postgres), uma conexão por execução.

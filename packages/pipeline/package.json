@@ -15,7 +15,8 @@
     "gravar": "tsx src/banco-cli.ts gravar",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "candidatos": "tsx src/tse-cli.ts"
+    "candidatos": "tsx src/tse-cli.ts",
+    "vincular": "tsx src/vinculo-cli.ts"
   },
   "dependencies": {
     "pg": "^8.23.1",

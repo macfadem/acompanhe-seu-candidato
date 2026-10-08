@@ -16,6 +16,7 @@ import { aplicarMigracoes, lerMigracoes } from '../src/migrar.js';
 import { lerCandidatos } from '../src/tse/candidatos.js';
 import { decodificarLatin1 } from '../src/tse/csv.js';
 import { gravarCandidatos } from '../src/tse/gravar-candidatos.js';
+import { gravarVinculos } from '../src/vinculo/gravar-vinculos.js';
 import { RAIZ_REPO } from './apoio.js';
 import { arquivoDeColeta, coletaSenado, PAPEIS_SUPABASE, PASTA_MIGRACOES } from './banco-apoio.js';
 
@@ -78,12 +79,18 @@ describe.skipIf(!URL_TESTE)('Postgres de verdade (pg)', () => {
     expect(await contar(db, 'voto')).toBe(243);
   });
 
-  it('candidatos do TSE: grava e repete sem duplicar', async () => {
+  it('candidatos do TSE e vínculos: grava e repete sem duplicar', async () => {
     const csv = readFileSync(path.join(RAIZ_REPO, 'packages/pipeline/test/fixtures/tse-consulta-cand-2026-sintetico.csv'));
     const { candidatos } = lerCandidatos(decodificarLatin1(csv));
     expect(await gravarCandidatos(db, candidatos)).toEqual({ novos: 7, atualizados: 0, mantidos: 0 });
     expect(await gravarCandidatos(db, candidatos)).toEqual({ novos: 0, atualizados: 7, mantidos: 0 });
     expect(await contar(db, 'candidato_tse')).toBe(7);
+
+    const vinculo = { sqCandidato: candidatos[0]!.sqCandidato, parlamentarId: 'camara:1001', casa: 'camara' as const, metodo: 'nome_civil_uf' as const };
+    expect(await gravarVinculos(db, 2026, [vinculo])).toEqual({ antes: 0, depois: 1 });
+    expect(await gravarVinculos(db, 2026, [vinculo])).toEqual({ antes: 1, depois: 1 });
+    await expect(gravarVinculos(db, 2026, [{ ...vinculo, parlamentarId: 'senado:1' }])).rejects.toThrow(); // casa ≠ prefixo
+    expect(await contar(db, 'vinculo_parlamentar')).toBe(1);
   });
 
   it('visitante anônimo lê, mas não escreve (RLS)', async () => {

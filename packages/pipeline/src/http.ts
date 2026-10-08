@@ -24,6 +24,11 @@ export interface ClienteHttp {
   getJson(url: string): Promise<unknown>;
 }
 
+/** Cliente que também baixa texto (ex.: CSV), com as mesmas tentativas e limites. */
+export interface ClienteHttpTexto extends ClienteHttp {
+  getTexto(url: string): Promise<string>;
+}
+
 export class ErroHttp extends Error {
   constructor(
     readonly status: number,
@@ -50,7 +55,7 @@ export function lerRetryAfter(valor: string | null, agora: number = Date.now()):
 
 const dormir = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-export function criarCliente(opcoes: OpcoesHttp = {}): ClienteHttp {
+export function criarCliente(opcoes: OpcoesHttp = {}): ClienteHttpTexto {
   const {
     tentativas = 5,
     timeoutMs = 30_000,
@@ -66,42 +71,46 @@ export function criarCliente(opcoes: OpcoesHttp = {}): ClienteHttp {
   const espera = (tentativa: number) =>
     Math.min(esperaMaxMs, esperaBaseMs * 2 ** (tentativa - 1)) * (0.5 + aleatorio() / 2);
 
+  /** GET com novas tentativas; devolve o corpo como texto. */
+  async function obter(url: string, accept: string): Promise<string> {
+    for (let tentativa = 1; ; tentativa++) {
+      let resposta: Response;
+      try {
+        resposta = await fetchFn(url, {
+          headers: { Accept: accept, 'User-Agent': userAgent },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch (erro) {
+        // Falha de rede ou timeout: tenta de novo enquanto houver tentativas.
+        if (tentativa >= tentativas) {
+          throw new Error(`Falha de rede em ${url} após ${tentativa} tentativas`, { cause: erro });
+        }
+        await esperar(espera(tentativa));
+        continue;
+      }
+
+      if (resposta.ok) return await resposta.text();
+
+      if (PASSAGEIROS.has(resposta.status) && tentativa < tentativas) {
+        const pedido = lerRetryAfter(resposta.headers.get('retry-after'));
+        await esperar(Math.min(esperaMaxMs, pedido ?? espera(tentativa)));
+        continue;
+      }
+      throw new ErroHttp(resposta.status, url);
+    }
+  }
+
   return {
     async getJson(url: string): Promise<unknown> {
-      for (let tentativa = 1; ; tentativa++) {
-        let resposta: Response;
-        try {
-          resposta = await fetchFn(url, {
-            headers: { Accept: 'application/json', 'User-Agent': userAgent },
-            signal: AbortSignal.timeout(timeoutMs),
-          });
-        } catch (erro) {
-          // Falha de rede ou timeout: tenta de novo enquanto houver tentativas.
-          if (tentativa >= tentativas) {
-            throw new Error(`Falha de rede em ${url} após ${tentativa} tentativas`, { cause: erro });
-          }
-          await esperar(espera(tentativa));
-          continue;
-        }
-
-        if (resposta.ok) {
-          const corpo = await resposta.text();
-          if (!corpo.trim()) return null;
-          try {
-            return JSON.parse(corpo) as unknown;
-          } catch (erro) {
-            throw new Error(`Resposta não é JSON em ${url}`, { cause: erro });
-          }
-        }
-
-        if (PASSAGEIROS.has(resposta.status) && tentativa < tentativas) {
-          const pedido = lerRetryAfter(resposta.headers.get('retry-after'));
-          await esperar(Math.min(esperaMaxMs, pedido ?? espera(tentativa)));
-          continue;
-        }
-        throw new ErroHttp(resposta.status, url);
+      const corpo = await obter(url, 'application/json');
+      if (!corpo.trim()) return null;
+      try {
+        return JSON.parse(corpo) as unknown;
+      } catch (erro) {
+        throw new Error(`Resposta não é JSON em ${url}`, { cause: erro });
       }
     },
+    getTexto: (url: string) => obter(url, 'text/csv, text/plain;q=0.9, */*;q=0.8'),
   };
 }
 

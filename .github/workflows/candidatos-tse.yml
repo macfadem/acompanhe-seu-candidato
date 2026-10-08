@@ -1,7 +1,8 @@
 name: Candidatos TSE 2026
 
 # Importa deputados federais e senadores de 2026 (com a situação da totalização) do arquivo
-# de candidatos do TSE. Fonte: TSE — Portal de Dados Abertos (CC-BY).
+# de candidatos do TSE e liga cada um ao id da Câmara/Senado (nome civil + UF).
+# Fontes: TSE — Portal de Dados Abertos (CC-BY), Câmara e Senado — Dados Abertos.
 # Grava no banco só se o secret SUPABASE_DB_URL existir; sempre guarda o JSON como artefato.
 on:
   schedule:
@@ -23,14 +24,15 @@ jobs:
       # Só diz SE o secret existe; o valor fica restrito ao passo que grava.
       BANCO_CONFIGURADO: ${{ secrets.SUPABASE_DB_URL != '' }}
     steps:
-      # Depois da diplomação (até 18/12/2026) os dados não mudam: a execução agendada para.
+      # Até a posse (01/02/2027) e mais duas semanas: os eleitos novatos ganham id na Câmara
+      # e no Senado nessa época, e o vínculo é refeito todo dia. Depois, só manual.
       - name: Conferir a data
         id: data
         env:
           EVENTO: ${{ github.event_name }}
         run: |
-          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2026-12-18" ]; then
-            echo "::notice title=Candidatos TSE::Depois de 18/12/2026 a importação só roda manualmente."
+          if [ "$EVENTO" = "schedule" ] && [ "$(TZ=America/Sao_Paulo date +%F)" \> "2027-02-15" ]; then
+            echo "::notice title=Candidatos TSE::Depois de 15/02/2027 a importação só roda manualmente."
             echo "seguir=nao" >> "$GITHUB_OUTPUT"
           else
             echo "seguir=sim" >> "$GITHUB_OUTPUT"
@@ -57,7 +59,9 @@ jobs:
           }
       - name: Importar (sem banco)
         if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO != 'true'
-        run: npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv"
+        run: |
+          npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv"
+          npm run vincular -- --candidatos dados/candidatos_tse_2026.json
       - name: Importar e gravar no banco
         if: steps.data.outputs.seguir == 'sim' && env.BANCO_CONFIGURADO == 'true'
         env:
@@ -66,10 +70,13 @@ jobs:
         run: |
           npm run migrar
           npm run candidatos -- --arquivo "$RUNNER_TEMP/tse/consulta_cand_2026_BRASIL.csv" --gravar
+          npm run vincular -- --candidatos dados/candidatos_tse_2026.json --gravar
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.data.outputs.seguir == 'sim' }}
         with:
           name: candidatos-tse
-          path: packages/pipeline/dados/candidatos_tse_*.json
+          path: |
+            packages/pipeline/dados/candidatos_tse_*.json
+            packages/pipeline/dados/vinculos_tse_*.json
           retention-days: 30
           if-no-files-found: warn

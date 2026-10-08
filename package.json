@@ -18,6 +18,7 @@
     "spike:noticias": "npm run spike:noticias -w @acompanhe/pipeline --",
     "migrar": "npm run migrar -w @acompanhe/pipeline --",
     "gravar": "npm run gravar -w @acompanhe/pipeline --",
-    "candidatos": "npm run candidatos -w @acompanhe/pipeline --"
+    "candidatos": "npm run candidatos -w @acompanhe/pipeline --",
+    "vincular": "npm run vincular -w @acompanhe/pipeline --"
   }
 }

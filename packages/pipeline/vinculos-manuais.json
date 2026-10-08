@@ -1,0 +1,50 @@
+[
+  {
+    "sqCandidato": "250002539612",
+    "parlamentarId": "camara:220645",
+    "acao": "vincular",
+    "nota": "ERIKA HILTON: nome de urna = nome parlamentar; mesma UF (SP) e partido (PSOL). Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "170002540301",
+    "parlamentarId": "camara:220667",
+    "acao": "vincular",
+    "nota": "PEDRO CAMPOS: nome de urna = nome parlamentar; mesma UF (PE) e partido (PSB). Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "130002539728",
+    "parlamentarId": "camara:220623",
+    "acao": "vincular",
+    "nota": "DUDA SALABERT: nome de urna = nome parlamentar; mesma UF (MG); partido na Câmara PDT, candidatura PSOL. Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "160002547585",
+    "parlamentarId": "camara:220644",
+    "acao": "vincular",
+    "nota": "ROSANGELA MORO: nome civil igual; UF na Câmara SP, candidatura 2026 PR. Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "60002534893",
+    "parlamentarId": "camara:178997",
+    "acao": "vincular",
+    "nota": "MOSES RODRIGUES: nome de urna = nome parlamentar; mesma UF (CE) e partido (UNIÃO). Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "150002544203",
+    "parlamentarId": "camara:220584",
+    "acao": "vincular",
+    "nota": "MURILO GALDINO: nome de urna = nome parlamentar; mesma UF (PB) e partido (REPUBLICANOS). Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "100002536094",
+    "parlamentarId": "camara:204574",
+    "acao": "vincular",
+    "nota": "JUNIOR LOURENÇO: nome de urna = nome parlamentar; mesma UF (MA); partido na Câmara PL, candidatura MDB. Sugestão de 07/10 — confira antes de juntar."
+  },
+  {
+    "sqCandidato": "190002542888",
+    "parlamentarId": "camara:204460",
+    "acao": "vincular",
+    "nota": "CARLOS JORDY: nome de urna = nome parlamentar; mesma UF (RJ) e partido (PL); deputado eleito senador. Sugestão de 07/10 — confira antes de juntar."
+  }
+]
