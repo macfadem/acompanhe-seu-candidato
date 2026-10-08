@@ -2,7 +2,7 @@
 
 Web app público e gratuito: o eleitor monta a colinha das eleições de 2026 e, depois da eleição, acompanha os deputados federais e senadores que escolheu — votações, notícias e um resumo semanal neutro, sempre com link para a fonte oficial.
 
-> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), esquema do banco, gravação no banco via `pg` (liga quando os secrets existirem), núcleo da colinha e o script do spike de notícias. importador de candidatos do TSE 2026. Próximo: projeto no Supabase, vínculo TSE ↔ Câmara/Senado e o app.
+> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), candidatos do TSE 2026 com a situação da totalização, vínculo dos candidatos com a Câmara e o Senado, gravação no banco via `pg` (liga quando os secrets do Supabase existirem), núcleo da colinha e o spike de notícias. Próximo: projeto no Supabase, fonte de notícias e o app.
 
 ## Princípios
 
