@@ -1,0 +1,104 @@
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.registro {
+  padding-block: var(--espaco-4);
+  border-top: 1px solid var(--linha);
+}
+
+.registro:last-child {
+  border-bottom: 1px solid var(--linha);
+}
+
+.artigo {
+  display: grid;
+  gap: var(--espaco-1);
+}
+
+.data {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+  font-variant-numeric: tabular-nums;
+}
+
+.corpo {
+  display: grid;
+  gap: var(--espaco-2);
+  min-width: 0;
+}
+
+.corpo > p {
+  margin: 0;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--texto-m);
+  line-height: 1.3;
+}
+
+.ementa {
+  max-width: 65ch;
+}
+
+.descricao,
+.nota {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+  max-width: 65ch;
+}
+
+/* O carimbo: o único elemento com cor própria, igual para todo voto (regra de neutralidade). */
+.voto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espaco-1) var(--espaco-2);
+  margin-block: var(--espaco-1);
+}
+
+.carimbo {
+  display: inline-block;
+  padding: 0.2em 0.65em 0.25em;
+  border: 2px solid var(--carimbo);
+  border-radius: 0.4em;
+  color: var(--carimbo);
+  background: var(--carimbo-fundo);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.original {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.resultado {
+  font-variant-numeric: tabular-nums;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1) var(--espaco-3);
+  font-size: var(--texto-p);
+}
+
+.vazio {
+  max-width: 60ch;
+  color: var(--apagado);
+}
+
+@media (min-width: 48rem) {
+  .artigo {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    column-gap: var(--espaco-4);
+  }
+
+  .data {
+    padding-top: 0.15em;
+  }
+}

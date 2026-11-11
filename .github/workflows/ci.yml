@@ -37,6 +37,11 @@ jobs:
         env:
           # Banco do serviço acima (descartável, só existe durante o job). Não é segredo.
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      # O site compila de verdade (Turbopack), com os dados de exemplo.
+      - name: Build do site
+        run: npm run build -w @acompanhe/app
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
       # Prova, na página da execução, que a integração rodou: os testes deixam dados no banco do serviço.
       - name: Conferir a integração com Postgres
         working-directory: packages/pipeline

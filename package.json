@@ -19,6 +19,8 @@
     "migrar": "npm run migrar -w @acompanhe/pipeline --",
     "gravar": "npm run gravar -w @acompanhe/pipeline --",
     "candidatos": "npm run candidatos -w @acompanhe/pipeline --",
-    "vincular": "npm run vincular -w @acompanhe/pipeline --"
+    "vincular": "npm run vincular -w @acompanhe/pipeline --",
+    "site": "npm run dev -w @acompanhe/app",
+    "site:build": "npm run build -w @acompanhe/app"
   }
 }
