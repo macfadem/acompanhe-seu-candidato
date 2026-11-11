@@ -1,0 +1,298 @@
+/*
+ * Tinta sobre papel. A única cor própria é a do carimbo (violeta de tinta de carimbo),
+ * reservada para o registro de voto e igual para todos. Nada de cores de partido.
+ */
+:root {
+  color-scheme: light dark;
+
+  --papel: #f5f6f8;
+  --folha: #ffffff;
+  --tinta: #1c2433;
+  --apagado: #576071;
+  --linha: #d8dce3;
+  --carimbo: #5b3fa6;
+  --carimbo-fundo: #f1edfa;
+
+  --texto-p: 0.9rem;
+  --texto-m: 1.2rem;
+  --texto-g: 1.6rem;
+  --texto-gg: clamp(2rem, 1.4rem + 3vw, 2.9rem);
+
+  --espaco-1: 0.25rem;
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1.25rem;
+  --espaco-5: 2rem;
+  --espaco-6: 3rem;
+
+  --largura: 46rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papel: #12151b;
+    --folha: #191d25;
+    --tinta: #e6e9ef;
+    --apagado: #a3aab7;
+    --linha: #2c323d;
+    --carimbo: #b9a7f5;
+    --carimbo-fundo: #231d3a;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  /* Atkinson Hyperlegible: desenhada para leitura por pessoas com baixa visão. */
+  font-family: 'Atkinson Hyperlegible Next Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--carimbo);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+code {
+  font-size: 0.9em;
+  padding: 0.05em 0.3em;
+  border-radius: 0.25em;
+  background: var(--papel);
+  border: 1px solid var(--linha);
+}
+
+.faixa {
+  width: 100%;
+  max-width: var(--largura);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .faixa {
+    padding-inline: 1.5rem;
+  }
+}
+
+/* Topo, aviso e rodapé ------------------------------------------------------ */
+
+.pular {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  background: var(--folha);
+  border: 2px solid var(--carimbo);
+}
+
+.pular:focus {
+  top: 0.5rem;
+}
+
+.topo {
+  background: var(--folha);
+  border-bottom: 1px solid var(--linha);
+}
+
+.topo .faixa {
+  padding-block: 0.9rem;
+}
+
+.marca {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.marca:hover {
+  text-decoration: underline;
+}
+
+.aviso-exemplo {
+  background: var(--folha);
+  border-bottom: 1px dashed var(--apagado);
+}
+
+.aviso-exemplo p {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  font-size: var(--texto-p);
+}
+
+@media (min-width: 40rem) {
+  .aviso-exemplo p {
+    padding-inline: 1.5rem;
+  }
+}
+
+.conteudo {
+  padding-block: var(--espaco-5) var(--espaco-6);
+}
+
+.rodape {
+  border-top: 1px solid var(--linha);
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.rodape .faixa {
+  padding-block: var(--espaco-5);
+}
+
+.rodape p {
+  margin: 0 0 var(--espaco-2);
+  max-width: 70ch;
+}
+
+/* Início ------------------------------------------------------------------ */
+
+.abertura h1 {
+  margin: 0 0 var(--espaco-3);
+  max-width: 18ch;
+  font-size: var(--texto-gg);
+  letter-spacing: -0.02em;
+}
+
+.abertura p {
+  max-width: 60ch;
+  margin: 0 0 var(--espaco-3);
+  font-size: 1.1rem;
+}
+
+.chamada {
+  margin-top: var(--espaco-6);
+}
+
+.chamada h2,
+.votos h2 {
+  margin: 0;
+  font-size: var(--texto-g);
+}
+
+.contagem {
+  margin: var(--espaco-1) 0 var(--espaco-4);
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.nomes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0 var(--espaco-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nomes li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco-3);
+  padding-block: var(--espaco-2);
+  border-bottom: 1px solid var(--linha);
+}
+
+.nomes a {
+  font-weight: 600;
+}
+
+.sigla {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+  white-space: nowrap;
+}
+
+/* Página do parlamentar ----------------------------------------------------- */
+
+.caminho {
+  margin-bottom: var(--espaco-4);
+  font-size: var(--texto-p);
+}
+
+.parlamentar h1 {
+  margin: 0;
+  font-size: var(--texto-gg);
+  letter-spacing: -0.02em;
+}
+
+.identificacao {
+  margin: var(--espaco-2) 0 0;
+  font-size: var(--texto-m);
+}
+
+.referencia {
+  margin: var(--espaco-1) 0 0;
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.votos {
+  margin-top: var(--espaco-6);
+}
+
+.legenda {
+  margin-top: var(--espaco-5);
+  padding: var(--espaco-3) var(--espaco-4);
+  background: var(--folha);
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+}
+
+.legenda summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.legenda dl {
+  display: grid;
+  gap: var(--espaco-3);
+  margin: var(--espaco-3) 0 0;
+}
+
+.legenda dt {
+  font-weight: 700;
+}
+
+.legenda dd {
+  max-width: 65ch;
+  margin: 0;
+  color: var(--apagado);
+}
