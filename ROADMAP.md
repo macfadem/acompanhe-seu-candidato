@@ -8,16 +8,14 @@ Cada item cabe numa sessão de trabalho e vira uma branch + pull request. **Pron
 
 - Coleta das votações nominais de plenário (Câmara e Senado), banco com RLS, candidatos do TSE 2026 e vínculo com a Câmara e o Senado.
 - Núcleo da colinha (`packages/colinha`) e spike de notícias (GDELT).
-- Começo do site (`packages/app`): página do parlamentar com os votos, a legenda e a fonte oficial; dados de exemplo; testes e build no CI.
+- Site (`packages/app`) com cara de aplicativo: início por estado, busca sem acento, crachá do parlamentar (números do período e grade de registros), comparar de 2 a 5 lado a lado, votações do Congresso, página da votação e "entenda os cargos"; dados de exemplo; testes e build no CI.
 
 ## 1. O site lendo dados reais
 
 - [ ] **Projeto no Supabase** (manual): criar o projeto e cadastrar os secrets, como no README. *Pronto quando* a coleta diária grava no banco.
 - [ ] **Fonte do Supabase**: implementar `FonteDeDados` (`packages/app/src/fontes/modelo.ts`) lendo `parlamentar`, `votacao` e `voto` com a chave pública (anon) e o RLS. *Pronto quando* `SUPABASE_URL` e `SUPABASE_ANON_KEY` trocam a fonte sem mudar nenhuma página; os testes usam respostas gravadas, sem rede; nenhuma chave `service_role` chega ao site.
 - [ ] **Atualização sem novo deploy**: páginas em cache, revalidadas depois da coleta diária. *Pronto quando* um voto novo no banco aparece no site no mesmo dia, sem deploy.
-- [ ] **Página da votação** (`/votacao/[casa]/[idCasa]`): descrição, ementa, resultado e os votos de todos, agrupados por registro. *Pronto quando* cada voto da página do parlamentar leva à votação, id inválido dá 404 e o agrupamento tem teste.
-- [ ] **Busca de parlamentar** por nome (com ou sem acento), UF e partido. *Pronto quando* "joao" encontra "João", a busca funciona sem JavaScript (formulário GET) e a normalização tem testes.
-- [ ] **Paginação dos votos** (hoje a página mostra os 50 mais recentes). *Pronto quando* há anterior/próxima com o total certo e o recorte tem teste.
+- [ ] **Paginação** dos votos do crachá (hoje, os 50 mais recentes) e das votações do Congresso (hoje, as 60 mais recentes). *Pronto quando* há anterior/próxima com o total certo e o recorte tem teste.
 - [ ] **Deploy**: preview por pull request e produção no merge da `main`. *Pronto quando* cada PR ganha um link de preview.
 
 ## 2. A colinha no site
@@ -33,7 +31,18 @@ Cada item cabe numa sessão de trabalho e vira uma branch + pull request. **Pron
 - [ ] **Resumo semanal por IA** (decidido: semanal, não diário): usa só os dados da semana, cada frase cita a votação de origem e nunca recomenda candidato. *Pronto quando* um verificador automático confere que toda votação e todo número citados existem nos dados, e a chave da API só existe como secret.
 - [ ] **Alertas de votações importantes** (decidido: critério de repercussão na imprensa; aviso no app, push opcional). *Pronto quando* a regra tem testes com exemplos reais e o alerta aparece no app.
 
-## 4. Lançamento
+## 4. Mais dados no crachá
+
+Cada item é uma coleta nova no pipeline (API oficial → modelo → migração → testes com respostas gravadas) e um bloco novo no crachá, sempre com a fonte.
+
+- [ ] **Cota parlamentar** (Câmara: `/deputados/{id}/despesas`; Senado: CEAPS). *Pronto quando* o crachá mostra o total do período e as maiores categorias, com link para cada nota na fonte.
+- [ ] **Presença nas sessões** (hoje a grade mostra o registro por votação nominal, não a presença oficial). *Pronto quando* a grade usa a lista de presença publicada por cada casa e o texto explica a diferença.
+- [ ] **Proposições e discursos**: quantos projetos apresentou e quantas vezes falou em plenário. *Pronto quando* cada número leva à lista na fonte.
+- [ ] **Patrimônio declarado** (TSE, bens de candidato). *Pronto quando* o valor vem da declaração da última eleição, com o ano e o link.
+- [ ] **Pauta do plenário**: o que está marcado para votar, não só o que já foi votado. *Pronto quando* a aba Congresso mostra os próximos dias com a fonte de cada casa.
+- [ ] **Outros cargos** (governador, deputado estadual, prefeito, vereador): só depois do lançamento; cada assembleia e câmara municipal publica de um jeito.
+
+## 5. Lançamento
 
 - [ ] **Acessibilidade** (WCAG 2.2 AA): teclado, contraste e leitor de tela. *Pronto quando* o axe roda no CI sem erros e o roteiro manual foi feito.
 - [ ] **Segurança e privacidade**: cabeçalhos (CSP, Referrer-Policy) e política de privacidade. *Pronto quando* a CSP não usa `unsafe-inline` para scripts e um teste ponta a ponta prova que a colinha não sai do aparelho.

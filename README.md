@@ -2,7 +2,7 @@
 
 Web app público e gratuito: o eleitor monta a colinha das eleições de 2026 e, depois da eleição, acompanha os deputados federais e senadores que escolheu — votações, notícias e um resumo semanal neutro, sempre com link para a fonte oficial.
 
-> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), candidatos do TSE 2026 com a situação da totalização, vínculo dos candidatos com a Câmara e o Senado, gravação no banco via `pg` (liga quando os secrets do Supabase existirem), núcleo da colinha, spike de notícias e o começo do site (a página de cada parlamentar com os votos e o link para a fonte oficial). Próximo: projeto no Supabase, o site lendo o banco, a colinha no site e a fonte de notícias — veja o [roteiro até o lançamento](ROADMAP.md).
+> **Status:** em construção. Pronto: coleta de votações nominais de plenário (Câmara e Senado, conferida com dados reais), candidatos do TSE 2026 com a situação da totalização, vínculo dos candidatos com a Câmara e o Senado, gravação no banco via `pg` (liga quando os secrets do Supabase existirem), núcleo da colinha, spike de notícias e o site com cara de aplicativo (estados, busca, crachá do parlamentar, comparar lado a lado, votações do Congresso e "entenda os cargos"). Próximo: projeto no Supabase, o site lendo o banco, a colinha no site e a fonte de notícias — veja o [roteiro até o lançamento](ROADMAP.md).
 
 ## Princípios
 
@@ -32,12 +32,13 @@ packages/pipeline/         coleta, normalização e gravação (roda no GitHub A
   src/cli.ts               linha de comando da coleta
   src/github.ts            anotações e resumo da página de execução do GitHub Actions
 packages/colinha/          núcleo da colinha no navegador (nada vai ao servidor)
-packages/app/              o site (Next.js): página de cada parlamentar com os votos e a fonte oficial
-  src/app/                 páginas (início, parlamentar, não encontrado)
-  src/fontes/              de onde o site lê: interface única; hoje, arquivo da coleta (Supabase depois)
-  src/apresentacao/        rótulos neutros dos registros e formatos (datas, placar, partido-UF)
-  src/componentes/         lista de votos, legenda e aviso de dados de exemplo
-  dados-exemplo/           coleta FICTÍCIA para desenvolver sem banco (o site avisa no topo)
+packages/app/              o site (Next.js), com cara de aplicativo: barra de seções embaixo no celular
+  src/app/                 páginas: início (estados e busca), UF, crachá do parlamentar, comparar,
+                           Congresso (votações recentes), votação, cargos e sobre
+  src/fontes/              de onde o site lê: interface única; hoje, arquivo da coleta (Supabase depois);
+                           exemplo.ts gera os dados FICTÍCIOS de desenvolvimento (o site avisa no topo)
+  src/apresentacao/        rótulos neutros, formatos, busca sem acento e as contas dos registros
+  src/componentes/         barra de seções, cartões, números, grade de registros, lista de votos, legenda
 supabase/migrations/       esquema do banco (Postgres/Supabase) com RLS
 .github/workflows/         CI, coleta diária e spike de notícias (manual)
 ```
@@ -77,6 +78,9 @@ npm run site:build    # build de produção (o CI também roda)
 - O arquivo é validado inteiro ao abrir, e todo link precisa ser http(s). Arquivo errado gera erro claro com o caminho e o campo.
 - No build de produção, a página inicial é gerada no build: defina `DADOS_ARQUIVO` também no `npm run site:build`.
 - Mesmos rótulos e o mesmo estilo de "carimbo" para todo voto, de qualquer parlamentar (regra de neutralidade); a legenda explica cada registro.
+- Os números do crachá e da comparação são só contagens do que a fonte registra: sem nota, índice ou ranking. A grade de registros nunca separa "sim" de "não".
+- Busca e comparação funcionam sem JavaScript (formulários GET; a comparação vive no endereço, `?p=camara:123&p=senado:45`).
+- O site não usa fotos de pessoas: mostra as iniciais.
 
 **Windows:** recomendamos o WSL2 (Ubuntu) — todos os comandos acima funcionam sem adaptação.
 
