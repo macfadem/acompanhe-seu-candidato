@@ -37,3 +37,51 @@ export function descreverContagem(mostrados: number, total: number): string {
   if (mostrados < total) return `As ${mostrados} mais recentes de ${total} votações no período coletado.`;
   return total === 1 ? '1 votação no período coletado.' : `${total} votações no período coletado.`;
 }
+
+export function caminhoDaVotacao(v: Pick<Votacao, 'casa' | 'idCasa'>): string {
+  return `/votacao/${v.casa}/${encodeURIComponent(v.idCasa)}`;
+}
+
+export function caminhoDaUf(uf: string): string {
+  return `/uf/${uf.toLowerCase()}`;
+}
+
+export const MAXIMO_PARA_COMPARAR = 5;
+
+/** Ids válidos ("camara:123"), sem repetição, no máximo 5, na ordem em que vieram. */
+export function lerIdsParaComparar(valor: string | string[] | undefined): string[] {
+  const lista = valor === undefined ? [] : Array.isArray(valor) ? valor : [valor];
+  const validos = lista.filter((id) => /^(camara|senado):\d{1,12}$/.test(id));
+  return [...new Set(validos)].slice(0, MAXIMO_PARA_COMPARAR);
+}
+
+/** "/comparar?p=camara:1&p=senado:2" (e "&q=..." quando há busca em andamento). */
+export function caminhoDeComparar(ids: readonly string[], busca?: string): string {
+  const params = new URLSearchParams();
+  for (const id of ids) params.append('p', id);
+  if (busca) params.set('q', busca);
+  const query = params.toString();
+  return query ? `/comparar?${query}` : '/comparar';
+}
+
+/** "Ana Maria Exemplo" → "AE"; um nome só → a primeira letra. */
+export function iniciais(nome: string): string {
+  const palavras = nome.trim().split(/\s+/).filter(Boolean);
+  const primeira = palavras[0]?.[0] ?? '';
+  const ultima = palavras.length > 1 ? (palavras.at(-1)?.[0] ?? '') : '';
+  return (primeira + ultima).toLocaleUpperCase('pt-BR');
+}
+
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
+
+/** "2026-10" → "out/2026". */
+export function formatarMes(anoMes: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(anoMes);
+  const nome = m ? MESES[Number(m[2]) - 1] : undefined;
+  if (!m || !nome) throw new Error(`mês fora do formato AAAA-MM: ${anoMes}`);
+  return `${nome}/${m[1]}`;
+}
+
+export function plural(n: number, um: string, varios: string): string {
+  return n === 1 ? `1 ${um}` : `${n} ${varios}`;
+}

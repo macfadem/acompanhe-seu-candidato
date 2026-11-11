@@ -1,6 +1,7 @@
+import Link from 'next/link';
 import type { Parlamentar, VotoNaVotacao } from '@/fontes/modelo';
 import { ROTULO_RESULTADO, ROTULO_VOTO } from '@/apresentacao/rotulos';
-import { formatarData, formatarPlacar, partidoUf, tituloDaVotacao } from '@/apresentacao/formatos';
+import { caminhoDaVotacao, formatarData, formatarPlacar, partidoUf, tituloDaVotacao } from '@/apresentacao/formatos';
 import estilos from './ListaDeVotos.module.css';
 
 interface Props {
@@ -35,7 +36,7 @@ export function ListaDeVotos({ parlamentar, itens }: Props) {
               </time>
               <div className={estilos.corpo}>
                 <h3 id={idTitulo} className={estilos.titulo}>
-                  {tituloDaVotacao(votacao)}
+                  <Link href={caminhoDaVotacao(votacao)}>{tituloDaVotacao(votacao)}</Link>
                 </h3>
                 {votacao.proposicao?.ementa ? <p className={estilos.ementa}>{votacao.proposicao.ementa}</p> : null}
                 {votacao.proposicao ? <p className={estilos.descricao}>{votacao.descricao}</p> : null}
@@ -60,6 +61,7 @@ export function ListaDeVotos({ parlamentar, itens }: Props) {
                 <p className={estilos.links}>
                   <a href={votacao.urlFonte}>Ver na fonte oficial</a>
                   {votacao.proposicao?.url ? <a href={votacao.proposicao.url}>Ver a proposição</a> : null}
+                  <Link href={caminhoDaVotacao(votacao)}>Como os outros votaram</Link>
                 </p>
               </div>
             </article>

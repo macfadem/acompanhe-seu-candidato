@@ -5,8 +5,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import exemplo from '../../dados-exemplo/coleta-exemplo.json';
 import { criarFonteDaColeta, lerColeta } from './coleta';
+import { coletaDeExemplo } from './exemplo';
 import type { FonteDeDados } from './modelo';
 
 type Ambiente = Readonly<Record<string, string | undefined>>;
@@ -24,7 +24,7 @@ export function fonteDeDados(ambiente: Ambiente = process.env): FonteDeDados {
 }
 
 export function fonteDeExemplo(): FonteDeDados {
-  return criarFonteDaColeta(lerColeta(exemplo, 'dados-exemplo/coleta-exemplo.json'), { tipo: 'exemplo' });
+  return criarFonteDaColeta(lerColeta(coletaDeExemplo(), 'os dados de exemplo'), { tipo: 'exemplo' });
 }
 
 export function fonteDoArquivo(caminho: string): FonteDeDados {

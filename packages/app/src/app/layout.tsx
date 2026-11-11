@@ -1,10 +1,12 @@
 import '@fontsource-variable/atkinson-hyperlegible-next';
 import './globals.css';
+import './aplicativo.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { fonteDeDados } from '@/fontes/escolher';
-import { AvisoDeExemplo, PeriodoDaColeta } from '@/componentes/OrigemDosDados';
+import { Abas } from '@/componentes/Abas';
+import { AvisoDeExemplo } from '@/componentes/OrigemDosDados';
 
 export const metadata: Metadata = {
   title: { default: 'Acompanhe Seu Candidato', template: '%s | Acompanhe Seu Candidato' },
@@ -34,6 +36,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <Link href="/" className="marca">
               Acompanhe Seu Candidato
             </Link>
+            <Abas />
           </div>
         </header>
         <AvisoDeExemplo origem={origem} />
@@ -42,14 +45,10 @@ export default function Layout({ children }: { children: ReactNode }) {
         </main>
         <footer className="rodape">
           <div className="faixa">
-            <PeriodoDaColeta origem={origem} />
             <p>
-              Fontes oficiais: <a href="https://dadosabertos.camara.leg.br">Dados Abertos da Câmara dos Deputados</a> e{' '}
-              <a href="https://legis.senado.leg.br/dadosabertos">Dados Abertos do Senado Federal</a>.
-            </p>
-            <p>
-              Projeto independente: não é um site oficial da Câmara, do Senado ou do TSE.{' '}
-              <a href={REPOSITORIO}>Código aberto</a>, licença MIT.
+              Dados oficiais da <a href="https://dadosabertos.camara.leg.br">Câmara</a> e do{' '}
+              <a href="https://legis.senado.leg.br/dadosabertos">Senado</a>. Projeto independente, de{' '}
+              <a href={REPOSITORIO}>código aberto</a>. <Link href="/sobre">Como funciona</Link>
             </p>
           </div>
         </footer>
