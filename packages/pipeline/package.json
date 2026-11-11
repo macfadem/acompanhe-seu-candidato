@@ -8,6 +8,10 @@
   "engines": {
     "node": ">=22.12"
   },
+  "exports": {
+    "./tipos": "./src/tipos.ts",
+    "./arquivo-coleta": "./src/arquivo-coleta.ts"
+  },
   "scripts": {
     "votacoes": "tsx src/cli.ts",
     "spike:noticias": "tsx src/spike-noticias.ts",
