@@ -1,0 +1,772 @@
+/*
+ * Cara de aplicativo: barra de seções embaixo no celular, cartões de pessoa, crachá, números,
+ * grade de registros e tabelas de comparação. Mesmas cores do site: tinta, papel e o violeta
+ * do carimbo, usado só para o que é registro oficial ou para onde se está.
+ */
+
+:root {
+  --altura-abas: 3.75rem;
+}
+
+/* Barra de seções ---------------------------------------------------------- */
+
+.topo .faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-4);
+}
+
+.abas {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  background: var(--folha);
+  border-top: 1px solid var(--linha);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.abas ul {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.abas a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: var(--altura-abas);
+  color: var(--apagado);
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.abas a[aria-current='page'] {
+  color: var(--carimbo);
+  font-weight: 700;
+  box-shadow: inset 0 3px 0 var(--carimbo);
+}
+
+body {
+  padding-bottom: calc(var(--altura-abas) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 48rem) {
+  .abas {
+    position: static;
+    border: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .abas ul {
+    display: flex;
+    gap: var(--espaco-4);
+    margin: 0;
+  }
+
+  .abas a {
+    flex-direction: row;
+    gap: 0.4rem;
+    min-height: 0;
+    padding-block: 0.35rem;
+    font-size: var(--texto-p);
+  }
+
+  .abas a[aria-current='page'] {
+    box-shadow: inset 0 -2px 0 var(--carimbo);
+  }
+
+  .abas svg {
+    display: none;
+  }
+
+  body {
+    padding-bottom: 0;
+  }
+}
+
+/* Blocos comuns -------------------------------------------------------------- */
+
+.secao {
+  margin-top: var(--espaco-6);
+}
+
+.secao > h2 {
+  margin: 0 0 var(--espaco-2);
+  font-size: var(--texto-g);
+}
+
+.secao p {
+  max-width: 65ch;
+}
+
+.sobretitulo {
+  margin: 0 0 var(--espaco-1);
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.abertura .sobretitulo {
+  font-size: var(--texto-p);
+}
+
+.abertura .descricao {
+  color: var(--apagado);
+  font-size: 1rem;
+}
+
+.vazio,
+.nota-fonte {
+  max-width: 60ch;
+  color: var(--apagado);
+}
+
+.nota-fonte {
+  font-size: var(--texto-p);
+}
+
+.adiante {
+  margin-top: var(--espaco-5);
+  font-weight: 600;
+}
+
+.lista {
+  max-width: 65ch;
+  margin: 0 0 var(--espaco-3);
+  padding-left: 1.2rem;
+}
+
+.lista li {
+  margin-bottom: var(--espaco-2);
+}
+
+cite {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.botao,
+.botao-leve,
+.busca button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 2px solid var(--tinta);
+  border-radius: 0.5rem;
+  background: var(--tinta);
+  color: var(--folha);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.botao-leve {
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  background: none;
+  border-width: 1px;
+  border-color: var(--apagado);
+  color: var(--tinta);
+  font-size: var(--texto-p);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.botao:hover,
+.busca button:hover {
+  background: var(--carimbo);
+  border-color: var(--carimbo);
+  color: var(--folha);
+}
+
+.botao-leve:hover {
+  border-color: var(--tinta);
+  box-shadow: inset 0 0 0 1px var(--tinta);
+}
+
+/* Busca ----------------------------------------------------------------------- */
+
+.busca {
+  margin-top: var(--espaco-4);
+}
+
+.busca label {
+  display: block;
+  margin-bottom: var(--espaco-1);
+  font-weight: 700;
+}
+
+.busca-linha {
+  display: flex;
+  gap: var(--espaco-2);
+}
+
+.busca input[type='search'] {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.8rem;
+  border: 2px solid var(--tinta);
+  border-radius: 0.5rem;
+  background: var(--folha);
+  color: var(--tinta);
+  font: inherit;
+}
+
+/* Início: passos e estados ---------------------------------------------------- */
+
+.passos {
+  display: grid;
+  gap: var(--espaco-3);
+  margin: var(--espaco-5) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: passo;
+}
+
+.passos li {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  column-gap: var(--espaco-3);
+  counter-increment: passo;
+}
+
+.passos li::before {
+  content: counter(passo);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--carimbo);
+  border-radius: 50%;
+  color: var(--carimbo);
+  font-weight: 800;
+}
+
+.passos span {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+@media (min-width: 48rem) {
+  .passos {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--espaco-4);
+  }
+}
+
+.ufs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--espaco-2);
+  margin: var(--espaco-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ufs a {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: var(--espaco-2);
+  height: 100%;
+  padding: var(--espaco-3);
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+  background: var(--folha);
+  text-decoration: none;
+}
+
+.ufs a:hover {
+  border-color: var(--tinta);
+}
+
+.ufs strong {
+  font-size: var(--texto-m);
+  letter-spacing: 0.02em;
+}
+
+.uf-nome {
+  overflow: hidden;
+  font-size: var(--texto-p);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uf-contagem {
+  grid-column: 1 / -1;
+  color: var(--apagado);
+  font-size: 0.8rem;
+}
+
+/* Cartões de pessoa ------------------------------------------------------------- */
+
+.monograma {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+  background: var(--papel);
+  color: var(--apagado);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.monograma-grande {
+  width: 4.5rem;
+  height: 5.5rem;
+  font-size: 1.5rem;
+}
+
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--espaco-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cartao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-3);
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+  background: var(--folha);
+}
+
+.cartao-texto {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.cartao-nome {
+  font-weight: 700;
+}
+
+.cartao-detalhe {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+/* Crachá: o cartão de identificação, com o furo do cordão no alto ------------------ */
+
+.cracha {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--espaco-4);
+  align-items: start;
+  padding: calc(var(--espaco-5) + 0.5rem) var(--espaco-4) var(--espaco-4);
+  border: 1px solid var(--linha);
+  border-top: 6px solid var(--carimbo);
+  border-radius: 0.9rem;
+  background: var(--folha);
+}
+
+.cracha::before {
+  content: '';
+  position: absolute;
+  top: 0.7rem;
+  left: 50%;
+  width: 3.2rem;
+  height: 0.6rem;
+  border: 1px solid var(--linha);
+  border-radius: 1rem;
+  background: var(--papel);
+  transform: translateX(-50%);
+}
+
+.cracha h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.2rem + 2.4vw, 2.4rem);
+  letter-spacing: -0.02em;
+}
+
+.cracha-cargo {
+  margin: 0 0 var(--espaco-1);
+  color: var(--carimbo);
+  font-size: var(--texto-p);
+  font-weight: 700;
+}
+
+.cracha .identificacao {
+  font-size: 1.05rem;
+}
+
+.cracha .botao {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 40rem) {
+  .cracha .botao {
+    justify-self: start;
+  }
+}
+
+/* Números ------------------------------------------------------------------------ */
+
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-2);
+  margin: var(--espaco-3) 0 0;
+}
+
+.numero {
+  padding: var(--espaco-3);
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+  background: var(--folha);
+}
+
+.numero-largo {
+  grid-column: 1 / -1;
+}
+
+.numero dd {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.numero dd span {
+  color: var(--apagado);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.numero dt {
+  margin-top: var(--espaco-1);
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+@media (min-width: 40rem) {
+  .numeros {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .numero-largo {
+    grid-column: span 2;
+  }
+}
+
+/* Grade de registros ---------------------------------------------------------------- */
+
+.grade {
+  display: grid;
+  gap: var(--espaco-3);
+  margin-top: var(--espaco-3);
+}
+
+.grade-mes {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.grade-mes h3 {
+  margin: 0;
+  color: var(--apagado);
+  font-size: var(--texto-p);
+  font-weight: 600;
+}
+
+.grade ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quadrado {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--tinta);
+  border-radius: 0.25rem;
+}
+
+.quadrado-voto {
+  background: var(--tinta);
+}
+
+.quadrado-ausencia {
+  background: repeating-linear-gradient(45deg, var(--tinta) 0 2px, transparent 2px 6px);
+}
+
+.quadrado-outro {
+  background: radial-gradient(circle, var(--tinta) 0 28%, transparent 30%);
+}
+
+.quadrado-sem_registro {
+  border-style: dashed;
+  border-color: var(--apagado);
+}
+
+a.quadrado:hover {
+  outline: 2px solid var(--carimbo);
+  outline-offset: 1px;
+}
+
+.grade .grade-legenda {
+  gap: var(--espaco-2) var(--espaco-4);
+  margin-top: var(--espaco-2);
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.grade-legenda li {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.grade-legenda .quadrado {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Comparação ----------------------------------------------------------------------- */
+
+.escolhidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  margin: var(--espaco-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.escolhidos li {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+  padding: 0.3rem 0.5rem 0.3rem 0.8rem;
+  border: 2px solid var(--carimbo);
+  border-radius: 2rem;
+  background: var(--carimbo-fundo);
+  font-weight: 700;
+}
+
+.escolhidos a {
+  padding: 0.15rem 0.5rem;
+  font-size: var(--texto-p);
+  font-weight: 400;
+}
+
+.rolagem {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--linha);
+  border-radius: 0.5rem;
+  background: var(--folha);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--texto-p);
+}
+
+.tabela th,
+.tabela td {
+  min-width: 7.5rem;
+  padding: var(--espaco-2) var(--espaco-3);
+  border-bottom: 1px solid var(--linha);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tabela tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.tabela thead th {
+  font-size: 1rem;
+}
+
+.tabela tbody th {
+  min-width: 9.5rem;
+  color: var(--apagado);
+  font-weight: 600;
+}
+
+.tabela tbody th a {
+  display: block;
+  color: var(--tinta);
+}
+
+.tabela td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Congresso e votação ------------------------------------------------------------------ */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  margin-top: var(--espaco-4);
+}
+
+.filtros a {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--apagado);
+  border-radius: 2rem;
+  font-size: var(--texto-p);
+  text-decoration: none;
+}
+
+.filtros a[aria-current='true'] {
+  border-color: var(--tinta);
+  background: var(--tinta);
+  color: var(--folha);
+  font-weight: 700;
+}
+
+.filtros + .contagem,
+.filtros + .vazio {
+  margin-top: var(--espaco-4);
+}
+
+.pauta section {
+  margin-top: var(--espaco-5);
+}
+
+.pauta h2 {
+  margin: 0 0 var(--espaco-2);
+  font-size: var(--texto-m);
+  font-variant-numeric: tabular-nums;
+}
+
+.pauta ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pauta li {
+  display: grid;
+  gap: var(--espaco-1);
+  padding-block: var(--espaco-3);
+  border-top: 1px solid var(--linha);
+}
+
+.pauta p {
+  max-width: 65ch;
+  margin: 0;
+}
+
+.pauta-casa,
+.pauta-resultado {
+  color: var(--apagado);
+  font-size: var(--texto-p);
+}
+
+.pauta-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.resultado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espaco-2) var(--espaco-3);
+  margin: var(--espaco-4) 0 var(--espaco-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.carimbo {
+  display: inline-block;
+  padding: 0.2em 0.65em 0.25em;
+  border: 2px solid var(--carimbo);
+  border-radius: 0.4em;
+  background: var(--carimbo-fundo);
+  color: var(--carimbo);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1) var(--espaco-3);
+  font-size: var(--texto-p);
+}
+
+.grupo {
+  margin-top: var(--espaco-4);
+}
+
+.grupo h3 {
+  margin: 0 0 var(--espaco-1);
+  font-size: var(--texto-m);
+}
+
+.grupo h3 span {
+  color: var(--apagado);
+  font-weight: 600;
+}
+
+/* Cargos ------------------------------------------------------------------------------- */
+
+.fatos {
+  display: grid;
+  gap: 0;
+  max-width: 44rem;
+  margin: var(--espaco-3) 0;
+}
+
+.fatos > div {
+  display: grid;
+  gap: var(--espaco-1);
+  padding-block: var(--espaco-3);
+  border-top: 1px solid var(--linha);
+}
+
+.fatos dt {
+  font-weight: 700;
+}
+
+.fatos dd {
+  margin: 0;
+}
+
+@media (min-width: 40rem) {
+  .fatos > div {
+    grid-template-columns: 11rem 1fr;
+    gap: var(--espaco-4);
+  }
+}
+
+.cargo h3 {
+  margin: var(--espaco-4) 0 var(--espaco-2);
+  font-size: var(--texto-m);
+}

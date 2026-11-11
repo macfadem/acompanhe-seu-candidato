@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { OrigemDosDados as Origem } from '@/fontes/modelo';
 import { formatarData } from '@/apresentacao/formatos';
 
@@ -7,8 +8,7 @@ export function AvisoDeExemplo({ origem }: { origem: Origem }) {
   return (
     <div className="aviso-exemplo" role="note">
       <p>
-        <strong>Dados de exemplo.</strong> Nomes, partidos e votos desta versão são fictícios. Para ver votações
-        reais, gere um arquivo com a coleta e aponte <code>DADOS_ARQUIVO</code> para ele (veja o README).
+        <strong>Dados de exemplo.</strong> Nomes, partidos e votos são fictícios. <Link href="/sobre">Saiba mais</Link>
       </p>
     </div>
   );

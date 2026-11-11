@@ -4,7 +4,7 @@
  * antes de usar: arquivo fora do formato não abre.
  */
 import { ColetaLida, conferirReferencias } from './formato';
-import type { FonteDeDados, OrigemDosDados, Parlamentar, VotoNaVotacao } from './modelo';
+import type { FonteDeDados, OrigemDosDados, Parlamentar, Votacao, VotoComParlamentar, VotoNaVotacao } from './modelo';
 
 export const LIMITE_PADRAO = 50;
 
@@ -25,8 +25,12 @@ export function lerColeta(conteudo: unknown, descricao: string): ColetaLida {
 
 /** Mais recente primeiro: data, depois hora (sem hora vai por último no dia), depois id. */
 export function compararMaisRecentePrimeiro(a: VotoNaVotacao, b: VotoNaVotacao): number {
-  const va = a.votacao;
-  const vb = b.votacao;
+  return compararVotacoes(a.votacao, b.votacao);
+}
+
+type Ordenavel = Pick<Votacao, 'id' | 'data' | 'dataHora'>;
+
+export function compararVotacoes(va: Ordenavel, vb: Ordenavel): number {
   if (va.data !== vb.data) return va.data < vb.data ? 1 : -1;
   if (va.dataHora !== vb.dataHora) {
     if (va.dataHora === null) return 1;
@@ -52,6 +56,23 @@ export function criarFonteDaColeta(coleta: ColetaLida, origem: OrigemDosDados): 
   }
   for (const lista of votosPorParlamentar.values()) lista.sort(compararMaisRecentePrimeiro);
 
+  const maisRecentes = [...coleta.votacoes].sort(compararVotacoes);
+  const votosPorVotacao = new Map<string, VotoComParlamentar[]>();
+  for (const voto of coleta.votos) {
+    const parlamentar = porId.get(voto.parlamentarId);
+    if (!parlamentar) continue;
+    const lista = votosPorVotacao.get(voto.votacaoId) ?? [];
+    lista.push({ voto, parlamentar });
+    votosPorVotacao.set(voto.votacaoId, lista);
+  }
+  for (const lista of votosPorVotacao.values()) {
+    lista.sort((a, b) => a.parlamentar.nome.localeCompare(b.parlamentar.nome, 'pt-BR'));
+  }
+
+  const conferirLimite = (limite: number) => {
+    if (!Number.isInteger(limite) || limite < 1) throw new RangeError(`limite inválido: ${limite}`);
+  };
+
   const ordenados: Parlamentar[] = [...coleta.parlamentares].sort(
     (a, b) => ordemDaCasa[a.casa] - ordemDaCasa[b.casa] || a.nome.localeCompare(b.nome, 'pt-BR'),
   );
@@ -65,9 +86,28 @@ export function criarFonteDaColeta(coleta: ColetaLida, origem: OrigemDosDados): 
       return porId.get(`${casa}:${idCasa}`) ?? null;
     },
     async votosDoParlamentar(parlamentarId, { limite = LIMITE_PADRAO } = {}) {
-      if (!Number.isInteger(limite) || limite < 1) throw new RangeError(`limite inválido: ${limite}`);
+      conferirLimite(limite);
       const todos = votosPorParlamentar.get(parlamentarId) ?? [];
       return { itens: todos.slice(0, limite), total: todos.length };
+    },
+    async registrosDoParlamentar(parlamentarId) {
+      const parlamentar = porId.get(parlamentarId);
+      if (!parlamentar) return [];
+      const votoPorVotacao = new Map((votosPorParlamentar.get(parlamentarId) ?? []).map((i) => [i.votacao.id, i.voto]));
+      return maisRecentes
+        .filter((v) => v.casa === parlamentar.casa)
+        .map((votacao) => ({ votacao, voto: votoPorVotacao.get(votacao.id) ?? null }))
+        .reverse();
+    },
+    async listarVotacoes({ casa, limite = LIMITE_PADRAO } = {}) {
+      conferirLimite(limite);
+      const todas = casa ? maisRecentes.filter((v) => v.casa === casa) : maisRecentes;
+      return { itens: todas.slice(0, limite), total: todas.length };
+    },
+    async buscarVotacao(casa, idCasa) {
+      const votacao = votacoes.get(`${casa}:${idCasa}`);
+      if (!votacao) return null;
+      return { votacao, votos: votosPorVotacao.get(votacao.id) ?? [] };
     },
   };
 }

@@ -94,6 +94,37 @@ describe('criarFonteDaColeta', () => {
     await expect(fonte.votosDoParlamentar('camara:1', { limite })).rejects.toThrow(RangeError);
   });
 
+  it('registros: todas as votações da casa, da mais antiga para a mais recente, com null onde não há registro', async () => {
+    const registros = await fonte.registrosDoParlamentar('camara:2');
+    expect(registros.map((r) => [r.votacao.id, r.voto?.categoria ?? null])).toEqual([
+      ['camara:10-1', null],
+      ['camara:13-1', null],
+      ['camara:11-1', null],
+      ['camara:12-1', 'nao'],
+    ]);
+    expect(await fonte.registrosDoParlamentar('senado:5')).toEqual([]);
+    expect(await fonte.registrosDoParlamentar('camara:999')).toEqual([]);
+  });
+
+  it('lista as votações da mais recente para a mais antiga, com filtro por casa e limite', async () => {
+    const todas = await fonte.listarVotacoes();
+    expect(todas.itens.map((v) => v.id)).toEqual(['camara:12-1', 'camara:11-1', 'camara:13-1', 'camara:10-1']);
+    expect(await fonte.listarVotacoes({ casa: 'senado' })).toEqual({ itens: [], total: 0 });
+    const pagina = await fonte.listarVotacoes({ casa: 'camara', limite: 1 });
+    expect(pagina.itens.map((v) => v.id)).toEqual(['camara:12-1']);
+    expect(pagina.total).toBe(4);
+    await expect(fonte.listarVotacoes({ limite: 0 })).rejects.toThrow(RangeError);
+  });
+
+  it('detalhe da votação: os votos com o parlamentar, em ordem alfabética', async () => {
+    const detalhe = await fonte.buscarVotacao('camara', '12-1');
+    expect(detalhe?.votos.map((v) => [v.parlamentar.nome, v.voto.categoria])).toEqual([
+      ['Eduardo', 'sim'],
+      ['Érica', 'nao'],
+    ]);
+    expect(await fonte.buscarVotacao('senado', '12-1')).toBeNull();
+  });
+
   it('o limite padrão é 50', () => {
     expect(LIMITE_PADRAO).toBe(50);
   });

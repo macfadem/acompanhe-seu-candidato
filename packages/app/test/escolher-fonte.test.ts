@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ArquivoColetaCompleto } from '@acompanhe/pipeline/arquivo-coleta';
 import { CATEGORIAS_VOTO } from '@acompanhe/pipeline/tipos';
-import exemplo from '../dados-exemplo/coleta-exemplo.json';
 import { fonteDeDados } from '../src/fontes/escolher';
+import { coletaDeExemplo } from '../src/fontes/exemplo';
 import { coleta, parlamentar, votacao, voto } from './apoio';
 
 function arquivoTemporario(nome: string, conteudo: string): string {
@@ -15,6 +15,8 @@ function arquivoTemporario(nome: string, conteudo: string): string {
 }
 
 describe('dados de exemplo', () => {
+  const exemplo = coletaDeExemplo();
+
   it('passam no esquema completo do pipeline, o mesmo que a gravação no banco usa', () => {
     const r = ArquivoColetaCompleto.safeParse(exemplo);
     expect(r.error?.issues ?? []).toEqual([]);
@@ -23,6 +25,21 @@ describe('dados de exemplo', () => {
   it('mostram cada categoria de voto pelo menos uma vez (menos "outro", que é código não mapeado)', () => {
     const presentes = new Set(exemplo.votos.map((v) => v.categoria));
     expect(CATEGORIAS_VOTO.filter((c) => c !== 'outro' && !presentes.has(c))).toEqual([]);
+  });
+
+  it('são sempre iguais, com 2 deputados e 1 senador por UF e nomes sem repetição', () => {
+    expect(coletaDeExemplo()).toEqual(exemplo);
+    expect(exemplo.parlamentares).toHaveLength(81);
+    expect(new Set(exemplo.parlamentares.map((p) => p.nome)).size).toBe(81);
+    expect(exemplo.parlamentares.filter((p) => p.uf === 'MG').map((p) => p.casa)).toEqual(['camara', 'camara', 'senado']);
+  });
+
+  it('o placar de cada votação aberta bate com os votos gerados', () => {
+    for (const v of exemplo.votacoes) {
+      if (!v.placar) continue;
+      const sim = exemplo.votos.filter((x) => x.votacaoId === v.id && x.categoria === 'sim').length;
+      expect(v.placar.sim, v.id).toBe(sim);
+    }
   });
 
   it('são o padrão quando DADOS_ARQUIVO não está definido', async () => {
